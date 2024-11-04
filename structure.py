@@ -4,7 +4,19 @@ class Participant:
     def __init__(self, name, base_score):
         self.name = name
         self.base_score = base_score
+
+        self.response_time = 0.0
+        self.attendance_rate = 0.0
         self.task_completion_rate = 0.0
+        self.hours_commitment = 0.0
+        self.team_performance = 0.0
+        self.problem_solving = 0.0
+        self.conflict_resolution = 0.0
+        self.leadership_metrics = 0.0
+        self.leadership_appointments = 0.0
+        self.cancellations_rate = 0.0
+
+
         self.volunteer_score = 0.0
         self.total_score = base_score
         self.rank = ""
