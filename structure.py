@@ -16,7 +16,6 @@ class Participant:
         self.leadership_appointments = 0.0
         self.cancellations_rate = 0.0
 
-
         self.volunteer_score = 0.0
         self.total_score = base_score
         self.rank = ""
@@ -24,6 +23,7 @@ class Participant:
 
     def calculate_volunteer_score(self):
         self.volunteer_score = random.uniform(0.0, 1.0)  # Random volunteer score between 0 and 1
+        
 
     def determine_rank(self):
         if self.total_score >= 500:
