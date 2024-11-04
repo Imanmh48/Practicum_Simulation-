@@ -85,13 +85,12 @@ def run_simulation(num_volunteers=10):
     initial_values = {}
     for i in range(num_volunteers):
         initial_values[f'V{i+1:03d}'] = {
-            'response_time': random.uniform(6.0, 10.0),
-            'attendance': random.uniform(6.0, 10.0),
-            'cancellations': random.uniform(6.0, 10.0),
-            'task_completion': random.uniform(6.0, 10.0),
-            'hours_commitment': random.uniform(6.0, 10.0)
+            'response_time': random.uniform(5.0, 10.0),  # Start from 5 for minimum baseline score
+            'attendance': random.uniform(5.0, 10.0),     # Start from 5 for minimum baseline score
+            'cancellations': random.uniform(5.0, 10.0),  # Start from 5 for minimum baseline score
+            'task_completion': random.uniform(5.0, 10.0), # Start from 5 for minimum baseline score
+            'hours_commitment': random.uniform(5.0, 10.0) # Start from 5 for minimum baseline score
         }
-    
     for i in range(num_volunteers):
         volunteer_id = f'V{i+1:03d}'
         
@@ -110,8 +109,8 @@ def run_simulation(num_volunteers=10):
         new_scores = {
             'volunteer_id': volunteer_id,
             'response_time': VolunteerMetrics.calculate_response_time(response_time),
-            'attendance': VolunteerMetrics.calculate_attendance(late_arrivals, early_departures, unscheduled_absences),
-            'cancellations': VolunteerMetrics.calculate_last_minute_cancellations(cancellations),
+            'attendance': VolunteerMetrics.calculate_attendance(late_arrivals, early_departures, unscheduled_absences,5),
+            'cancellations': VolunteerMetrics.calculate_last_minute_cancellations(cancellations,5),
             'task_completion': VolunteerMetrics.calculate_task_completion(completed_tasks, total_tasks),
             'hours_commitment': VolunteerMetrics.calculate_hours_commitment(logged_hours, expected_hours)
         }
