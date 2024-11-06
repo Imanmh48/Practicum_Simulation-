@@ -1,5 +1,8 @@
 import random
 
+from sim1 import VolunteerMetrics
+from Event import Event
+
 class Participant:
     def __init__(self, name, base_score):
         self.name = name
@@ -10,6 +13,7 @@ class Participant:
         self.task_completion_rate = 0.0
 
         self.event_score = 0.0
+        self.metrics_score = 0.0 # the current postion of the participant in the metrics
 
         self.hours_commitment = 0.0
         self.team_performance = 0.0
@@ -17,9 +21,7 @@ class Participant:
         self.conflict_resolution = 0.0
         self.leadership_metrics = 0.0
         self.leadership_appointments = 0.0
-        self.cancellations_rate = 0.0
 
-        self.volunteer_score = 0.0
         self.total_score = base_score
         self.rank = ""
         self.inactivity_period = 0
@@ -35,8 +37,50 @@ class Participant:
             self.event_score = 150
         else:
             self.event_score = 100  # Default score for small events
-    def calculate_volunteer_score(self):
-      self.volunteer_score = random.uniform(0.8, 1.0)  # Random volunteer score between 0 and 1
+    
+    def update_metrics_score(self, event, response_time_mins, late_arrivals, early_departures, 
+                           unscheduled_absences, completed_tasks, total_tasks,
+                           logged_hours, expected_hours, team_completed, team_total,
+                           actual_time, planned_time, problem_time, expected_problem_time,
+                           successful_solutions, total_solutions, conflicts_resolved, 
+                           total_conflicts):
+        """Update metrics score based on event's metrics weights and provided metric values"""
+        # Get weights from event object
+        weights = event._get_weights_for_type(event.event_type)
+        
+        # Calculate new metric scores with weights applied
+        metrics = VolunteerMetrics()
+        
+        # Calculate new metric scores with weights applied
+        new_response_time = metrics.calculate_response_time(response_time_mins) * weights['response_time']
+        new_attendance = metrics.calculate_attendance(late_arrivals, early_departures, unscheduled_absences, 5) * weights['attendance_rate']
+        new_task_completion = metrics.calculate_task_completion(completed_tasks, total_tasks) * weights['task_completion']
+        new_hours = metrics.calculate_hours_commitment(logged_hours, expected_hours)  # No weight for hours
+        new_team_perf = metrics.calculate_team_performance(team_completed, team_total, actual_time, planned_time) * weights['team_performance']
+        new_problem_solving = metrics.calculate_problem_solving(problem_time, expected_problem_time, successful_solutions, total_solutions) * weights['problem_solving']
+        new_conflict = metrics.calculate_conflict_resolution(conflicts_resolved, total_conflicts) * weights['conflict_resolution']
+        new_leadership = metrics.calculate_leadership_metrics(team_completed, team_total, self.leadership_appointments) * weights['leadership']
+        
+        # Update metrics by averaging with previous weighted values
+        self.response_time = (self.response_time + new_response_time) / 2
+        self.attendance_rate = (self.attendance_rate + new_attendance) / 2
+        self.task_completion_rate = (self.task_completion_rate + new_task_completion) / 2
+        self.hours_commitment = (self.hours_commitment + new_hours) / 2
+        self.team_performance = (self.team_performance + new_team_perf) / 2
+        self.problem_solving = (self.problem_solving + new_problem_solving) / 2
+        self.conflict_resolution = (self.conflict_resolution + new_conflict) / 2
+        self.leadership_metrics = (self.leadership_metrics + new_leadership) / 2
+        
+        # Sum up all weighted metrics for final score
+        self.metrics_score = (
+            self.response_time +
+            self.attendance_rate + 
+            self.task_completion_rate +
+            self.team_performance +
+            self.problem_solving +
+            self.leadership_metrics +
+            self.conflict_resolution
+        )
 
     def determine_rank(self):
         if self.total_score >= 600:
@@ -62,7 +106,7 @@ class Participant:
 
     def apply_decay(self):
         # Calculate the total score before applying decay
-        total_score_before_decay = self.base_score + (self.event_score * 100) + (self.task_completion_rate * 100)
+        total_score_before_decay = self.base_score + (self.event_score) + (self.metrics_score)
 
         # Apply inactivity decay if applicable and rank is Platinum
         if self.inactivity_period > 3 and self.rank == "Platinum":
@@ -88,11 +132,125 @@ def simulate_events(num_events, event_size):  # Function to handle a specific ev
     for event_number in range(1, num_events + 1):
         print(f"\nEvent {event_number} (Event Size: {event_size}):")
         print("=" * 50)
-        print(f"{'Name':<10} | {'Base Score':<10} | {'Completion Rate':<15} | {'Event Score':<15} | {'Total Score':<15} | {'Rank':<6} | {'Inactivity':<10}")
+        print(f"{'Name':<10} | {'Base Score':<10} | {'Metrics_Score':<15} | {'Event Score':<15} | {'Total Score':<15} | {'Rank':<6} | {'Inactivity':<10}")
         print("-" * 92)
 
         for participant in participants:
-            participant.task_completion_rate = random.uniform(0.0, 1.0)
+            # Simulate with different metrics per participant based on their base scores
+            # Base scores: Ayoub (600), Iman (550), Osama (500), Fatima (450), Bisma (400)
+            event = Event("Test Event", event_size, "2024-01-01", "standard")
+            
+            if participant.name == "Ayoub":  # Highest base score (600) - Best performer
+                participant.update_metrics_score(
+                    event=event,
+                    response_time_mins=15,   # Exceptional response time
+                    late_arrivals=0,         # Perfect attendance
+                    early_departures=0,
+                    unscheduled_absences=0,
+                    completed_tasks=10,      # Perfect task completion
+                    total_tasks=10,
+                    logged_hours=40,         # Full hours commitment
+                    expected_hours=40,
+                    team_completed=10,       # Perfect team performance
+                    team_total=10,
+                    actual_time=40,          # Perfect time management
+                    planned_time=40,
+                    problem_time=40,         # Excellent problem solving
+                    expected_problem_time=40,
+                    successful_solutions=10,  # Perfect solutions
+                    total_solutions=10,
+                    conflicts_resolved=10,    # Perfect conflict resolution
+                    total_conflicts=10
+                )
+            elif participant.name == "Iman":  # Second highest (550) - Very good performer
+                participant.update_metrics_score(
+                    event=event,
+                    response_time_mins=20,   # Very good response time
+                    late_arrivals=0,
+                    early_departures=1,      # Occasional early departure
+                    unscheduled_absences=0,
+                    completed_tasks=9,       # Very good completion rate
+                    total_tasks=10,
+                    logged_hours=38,         # Strong hours commitment
+                    expected_hours=40,
+                    team_completed=9,
+                    team_total=10,
+                    actual_time=38,
+                    planned_time=40,
+                    problem_time=38,
+                    expected_problem_time=40,
+                    successful_solutions=9,
+                    total_solutions=10,
+                    conflicts_resolved=9,
+                    total_conflicts=10
+                )
+            elif participant.name == "Osama":  # Middle score (500) - Good performer
+                participant.update_metrics_score(
+                    event=event,
+                    response_time_mins=30,   # Average response time
+                    late_arrivals=1,         # Occasional lateness
+                    early_departures=1,
+                    unscheduled_absences=0,
+                    completed_tasks=8,       # Good completion rate
+                    total_tasks=10,
+                    logged_hours=36,         # Good hours commitment
+                    expected_hours=40,
+                    team_completed=8,
+                    team_total=10,
+                    actual_time=36,
+                    planned_time=40,
+                    problem_time=36,
+                    expected_problem_time=40,
+                    successful_solutions=8,
+                    total_solutions=10,
+                    conflicts_resolved=8,
+                    total_conflicts=10
+                )
+            elif participant.name == "Fatima":  # Second lowest (450) - Fair performer
+                participant.update_metrics_score(
+                    event=event,
+                    response_time_mins=45,   # Below average response
+                    late_arrivals=1,
+                    early_departures=1,
+                    unscheduled_absences=1,  # Some absences
+                    completed_tasks=7,       # Fair completion rate
+                    total_tasks=10,
+                    logged_hours=34,         # Below target hours
+                    expected_hours=40,
+                    team_completed=7,
+                    team_total=10,
+                    actual_time=34,
+                    planned_time=40,
+                    problem_time=34,
+                    expected_problem_time=40,
+                    successful_solutions=7,
+                    total_solutions=10,
+                    conflicts_resolved=7,
+                    total_conflicts=10
+                )
+            else:  # Bisma - Lowest base score (400) - Needs improvement
+                participant.update_metrics_score(
+                    event=event,
+                    response_time_mins=60,   # Slow response time
+                    late_arrivals=2,         # Frequent lateness
+                    early_departures=2,
+                    unscheduled_absences=1,
+                    completed_tasks=6,       # Lower completion rate
+                    total_tasks=10,
+                    logged_hours=32,         # Significantly below target
+                    expected_hours=40,
+                    team_completed=6,
+                    team_total=10,
+                    actual_time=32,
+                    planned_time=40,
+                    problem_time=32,
+                    expected_problem_time=40,
+                    successful_solutions=6,
+                    total_solutions=10,
+                    conflicts_resolved=6,
+                    total_conflicts=10
+                )
+
             participant.calculate_event_score(event_size)  # Use the given event size for score calculation
 
             if participant.name == "Ayoub" and event_number <= 5:
@@ -106,7 +264,10 @@ def simulate_events(num_events, event_size):  # Function to handle a specific ev
             # Determine rank and award badge
             participant.determine_rank()
             badge = participant.award_badge()
-            print(f"{participant.name:<10} | {participant.base_score:<10.1f} | {participant.task_completion_rate:<15.2f} | {participant.event_score:<15.2f} | {participant.total_score:<15.1f} | {participant.rank:<6} | {participant.inactivity_period:<10} | Badge: {badge}")
+            print(f"{participant.name:<10} | {participant.base_score:<10.1f} | {participant.metrics_score:<15.2f} | {participant.event_score:<15.2f} | {participant.total_score:<15.1f} | {participant.rank:<6} | {participant.inactivity_period:<10} | Badge: {badge}")
+         # Update base_score to total_score after each event
+            participant.base_score = participant.total_score
+
         print("=" * 50)  # Separator between events
 
 # Test different event sizes

@@ -73,10 +73,6 @@ class VolunteerMetrics:
         leadership_appointment_score = min(10, leadership_appointments * 2)  # Assuming each appointment is worth 2 points
         return (leadership_score + leadership_appointment_score) / 2
 
-    @staticmethod
-    def calculate_last_minute_cancellations(cancellations, total_shifts):
-        return max(0, 10 - (cancellations / total_shifts * 10))  # Standard 10x multiplier
-
 def run_simulation(num_volunteers=10):
     final_results = []
     new_scores_list = []
@@ -87,7 +83,6 @@ def run_simulation(num_volunteers=10):
         initial_values[f'V{i+1:03d}'] = {
             'response_time': random.uniform(5.0, 10.0),
             'attendance': random.uniform(5.0, 10.0),
-            'cancellations': random.uniform(5.0, 10.0),
             'task_completion': random.uniform(5.0, 10.0),
             'hours_commitment': random.uniform(5.0, 10.0)
         }
@@ -100,7 +95,6 @@ def run_simulation(num_volunteers=10):
         late_arrivals = random.randint(0, 5)
         early_departures = random.randint(0, 5)
         unscheduled_absences = random.randint(0, 3)
-        cancellations = random.randint(0, 4)
         completed_tasks = random.randint(20, 30)
         total_tasks = 30
         logged_hours = random.randint(40, 60)
@@ -111,7 +105,6 @@ def run_simulation(num_volunteers=10):
             'volunteer_id': volunteer_id,
             'response_time': VolunteerMetrics.calculate_response_time(response_time),
             'attendance': VolunteerMetrics.calculate_attendance(late_arrivals, early_departures, unscheduled_absences,5),
-            'cancellations': VolunteerMetrics.calculate_last_minute_cancellations(cancellations,5),
             'task_completion': VolunteerMetrics.calculate_task_completion(completed_tasks, total_tasks),
             'hours_commitment': VolunteerMetrics.calculate_hours_commitment(logged_hours, expected_hours)
         }
@@ -122,7 +115,6 @@ def run_simulation(num_volunteers=10):
             'volunteer_id': volunteer_id,
             'response_time': (initial_values[volunteer_id]['response_time'] + new_scores['response_time']) / 2,
             'attendance': (initial_values[volunteer_id]['attendance'] + new_scores['attendance']) / 2,
-            'cancellations': (initial_values[volunteer_id]['cancellations'] + new_scores['cancellations']) / 2,
             'task_completion': (initial_values[volunteer_id]['task_completion'] + new_scores['task_completion']) / 2,
             'hours_commitment': (initial_values[volunteer_id]['hours_commitment'] + new_scores['hours_commitment']) / 2
         }
@@ -139,40 +131,37 @@ simulation_results, initial_values, new_scores_list = run_simulation(5)
 # Display Initial Values
 print("\nInitial Values:")
 print("-" * 80)
-print(f"{'ID':<8} {'Response':<10} {'Attend':<10} {'Cancel':<10} {'Tasks':<10} {'Hours':<10}")
+print(f"{'ID':<8} {'Response':<10} {'Attend':<10} {'Tasks':<10} {'Hours':<10}")
 print("-" * 80)
 for vol_id, values in initial_values.items():
     print(f"{vol_id:<8} "
           f"{values['response_time']:<10.1f} "
           f"{values['attendance']:<10.1f} "
-          f"{values['cancellations']:<10.1f} "
           f"{values['task_completion']:<10.1f} "
           f"{values['hours_commitment']:<10.1f}")
 
 # Display New Values (from current simulation)
 print("\nNew Values:")
 print("-" * 80)
-print(f"{'ID':<8} {'Response':<10} {'Attend':<10} {'Cancel':<10} {'Tasks':<10} {'Hours':<10}")
+print(f"{'ID':<8} {'Response':<10} {'Attend':<10} {'Tasks':<10} {'Hours':<10}")
 print("-" * 80)
 for result in new_scores_list:
     vol_id = result['volunteer_id']
     print(f"{vol_id:<8} "
           f"{result['response_time']:<10.1f} "
           f"{result['attendance']:<10.1f} "
-          f"{result['cancellations']:<10.1f} "
           f"{result['task_completion']:<10.1f} "
           f"{result['hours_commitment']:<10.1f}")
 
 # Display Final Results (averages)
 print("\nFinal Results (Average of Initial and New Values):")
 print("-" * 80)
-print(f"{'ID':<8} {'Response':<10} {'Attend':<10} {'Cancel':<10} {'Tasks':<10} {'Hours':<10} {'Avg':<10}")
+print(f"{'ID':<8} {'Response':<10} {'Attend':<10} {'Tasks':<10} {'Hours':<10} {'Avg':<10}")
 print("-" * 80)
 for result in simulation_results:
     print(f"{result['volunteer_id']:<8} "
           f"{result['response_time']:<10.1f} "
           f"{result['attendance']:<10.1f} "
-          f"{result['cancellations']:<10.1f} "
           f"{result['task_completion']:<10.1f} "
           f"{result['hours_commitment']:<10.1f} "
           f"{result['average']:<10.1f}") 
