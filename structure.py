@@ -11,10 +11,12 @@ class Participant:
         self.inactivity_period = 0
 
     def calculate_volunteer_score(self):
-        self.volunteer_score = random.uniform(0.0, 1.0)  # Random volunteer score between 0 and 1
+        self.volunteer_score = random.uniform(0.8, 1.0)  # Random volunteer score between 0 and 1
 
     def determine_rank(self):
-        if self.total_score >= 500:
+        if self.total_score >= 600:
+            self.rank = "Platinum"
+        elif self.total_score >= 500:
             self.rank = "A"
         elif self.total_score >= 300:
             self.rank = "B"
@@ -37,8 +39,8 @@ class Participant:
         # Calculate the total score before applying decay
         total_score_before_decay = self.base_score + (self.volunteer_score * 100) + (self.task_completion_rate * 100)
 
-        # Apply inactivity decay if applicable
-        if self.inactivity_period > 3:
+        # Apply inactivity decay if applicable and rank is Platinum
+        if self.inactivity_period > 3 and self.rank == "Platinum":
             print(f"Total Score before decay for {self.name}: {total_score_before_decay:.2f}")
             inactivity_decay = total_score_before_decay * 0.10  # 10% decay for inactivity
             total_score_before_decay -= inactivity_decay
@@ -46,14 +48,14 @@ class Participant:
 
         # Set the total score after decay
         self.total_score = total_score_before_decay
-        
+
 def simulate_events(num_events):
     participants = [
-        Participant(name="Osama", base_score=100),
-        Participant(name="Iman", base_score=200),
-        Participant(name="Ayoub", base_score=300),
-        Participant(name="Bisma", base_score=400),
-        Participant(name="Fatima", base_score=500)
+        Participant(name="Osama", base_score=500),  # Starting close to "A" rank
+        Participant(name="Iman", base_score=550),   # Likely to reach "Platinum" quickly
+        Participant(name="Ayoub", base_score=600),  # Starts at "Platinum" rank
+        Participant(name="Bisma", base_score=400),  # Starting at "B" rank
+        Participant(name="Fatima", base_score=450)  # Starting near "B" rank
     ]
 
     for event_number in range(1, num_events + 1):
