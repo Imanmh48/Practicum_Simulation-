@@ -1,5 +1,6 @@
 import random
 
+
 class Participant:
     def __init__(self, name, base_score):
         self.name = name
@@ -73,7 +74,29 @@ class Participant:
 
         # Set the total score after decay
         self.total_score = total_score_before_decay
-
+def apply_reset(list_participants,highest_rank=25000): #this will apply the reset for all classes
+    for participant in list_participants:
+        if participant.total_score>=highest_rank: #will change this to be if they are above platinum they will be reset to platinum
+            participant.total_score=highest_rank
+        else:
+            participant.total_score-=10000 #will change this value once we determine the ranks
+       
+def distrubte_events_across_seasons(num_of_events,num_of_seasons):
+    counter=0
+    while True: 
+        event_assignment=[]
+        for i in range(num_of_seasons):
+            num_of_event=random.randint(1,num_of_events) #generate a random number of events
+            event_assignment.append(num_of_event) # append that number
+        if sum(event_assignment)==num_of_events: # make sure that my generated number of event is equal to all_events
+            print("number of events distribution")
+            print(event_assignment)
+            break
+        counter+=1
+        if counter==2000: #safeguard
+            print("out")
+            break
+    return event_assignment
 def simulate_events(num_events, event_size):  # Function to handle a specific event size
     participants = [
         Participant(name="Osama", base_score=500),
@@ -82,10 +105,28 @@ def simulate_events(num_events, event_size):  # Function to handle a specific ev
         Participant(name="Bisma", base_score=400),
         Participant(name="Fatima", base_score=450)
     ]
-
+    the_gap=5 #the frequency of resets this is relevant to the equally distrubted events
+    current=0#
+    event_distribution=distrubte_events_across_seasons(num_events,5)
+    breakpoint=event_distribution[current]
+    counter=1 #when the reset happens
     print(f"\nSimulating with Event Size: {event_size}")  # Print the event size before the events
     print("=" * 80)
+    print("Season",counter)
+    print("#"*90)
     for event_number in range(1, num_events + 1):
+        #if (event_number-1)==((counter*num_events)//the_gap): # this is the case of evenly distributed events accross seasons
+        #    apply_reset(participants)
+        #    print("Season",counter+1)
+        #    print("#"*90)
+        #    counter+=1
+        if (event_number-1)==breakpoint: #this is the case of randomly distributed events
+            print("season",counter+1)
+            print("#"*90)
+            apply_reset(participants)
+            counter+=1
+            current+=1
+            breakpoint+=event_distribution[current]
         print(f"\nEvent {event_number} (Event Size: {event_size}):")
         print("=" * 50)
         print(f"{'Name':<10} | {'Base Score':<10} | {'Completion Rate':<15} | {'Event Score':<15} | {'Total Score':<15} | {'Rank':<6} | {'Inactivity':<10}")
@@ -103,11 +144,11 @@ def simulate_events(num_events, event_size):  # Function to handle a specific ev
             # Apply decay before updating final total score
             participant.apply_decay()
 
-            # Determine rank and award badge
+                # Determine rank and award badge
             participant.determine_rank()
             badge = participant.award_badge()
             print(f"{participant.name:<10} | {participant.base_score:<10.1f} | {participant.task_completion_rate:<15.2f} | {participant.event_score:<15.2f} | {participant.total_score:<15.1f} | {participant.rank:<6} | {participant.inactivity_period:<10} | Badge: {badge}")
-        print("=" * 50)  # Separator between events
+            print("=" * 50)  # Separator between events
 
 # Test different event sizes
 event_sizes = [50, 100, 150, 200, 250]  # List of different event sizes to test
