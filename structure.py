@@ -36,24 +36,17 @@ class Participant:
     def apply_decay(self):
         # Calculate the total score before applying decay
         total_score_before_decay = self.base_score + (self.volunteer_score * 100) + (self.task_completion_rate * 100)
-        print(f"Total Score before decay for {self.name}: {total_score_before_decay:.2f}")
 
         # Apply inactivity decay if applicable
         if self.inactivity_period > 3:
+            print(f"Total Score before decay for {self.name}: {total_score_before_decay:.2f}")
             inactivity_decay = total_score_before_decay * 0.10  # 10% decay for inactivity
             total_score_before_decay -= inactivity_decay
             print(f"Decay applied for inactivity to {self.name}: -{inactivity_decay:.2f}")
 
-        # Apply decay for low task completion
-        if self.task_completion_rate < 0.5:
-            decay_rate = random.uniform(0.1, 0.3)  # Random decay rate between 10% and 30%
-            decay_amount = total_score_before_decay * decay_rate
-            total_score_before_decay -= decay_amount
-            print(f"Decay applied for low task completion to {self.name}: -{decay_amount:.2f} (Rate: {decay_rate*100:.2f}%)")
-
         # Set the total score after decay
         self.total_score = total_score_before_decay
-
+        
 def simulate_events(num_events):
     participants = [
         Participant(name="Osama", base_score=100),
