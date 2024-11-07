@@ -269,3 +269,4 @@ def simulate_events(num_events, event_size, threshold_type="even_spread"):
             participant.determine_rank(thresholds)
             inactivity_display = f"{participant.inactivity_period} months" if participant.inactivity_period > 0 else "Active"
             print(f"{participant.name:<10} | {participant.base_score:<10} | {participant.metrics_score:<15.2f} | {participant.event_score:<15} | {participant.total_score:<15.2f} | {participant.rank:<6} | {inactivity_display:<10}")
+
