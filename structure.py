@@ -13,7 +13,7 @@ class Participant:
         self.task_completion_rate = 0.0
 
         self.event_score = 0.0
-        self.metrics_score = 0.0 # the current postion of the participant in the metrics
+        self.metrics_score = 0.0  # the current position of the participant in the metrics
 
         self.hours_commitment = 0.0
         self.team_performance = 0.0
@@ -25,7 +25,6 @@ class Participant:
         self.total_score = base_score
         self.rank = ""
         self.inactivity_period = 0
-
 
     def calculate_event_score(self, event_size):
         # Assign event_score based on event_size thresholds
@@ -39,11 +38,11 @@ class Participant:
             self.event_score = 100  # Default score for small events
     
     def update_metrics_score(self, event, response_time_mins, late_arrivals, early_departures, 
-                           unscheduled_absences, completed_tasks, total_tasks,
-                           logged_hours, expected_hours, team_completed, team_total,
-                           actual_time, planned_time, problem_time, expected_problem_time,
-                           successful_solutions, total_solutions, conflicts_resolved, 
-                           total_conflicts):
+                             unscheduled_absences, completed_tasks, total_tasks,
+                             logged_hours, expected_hours, team_completed, team_total,
+                             actual_time, planned_time, problem_time, expected_problem_time,
+                             successful_solutions, total_solutions, conflicts_resolved, 
+                             total_conflicts):
         """Update metrics score based on event's metrics weights and provided metric values"""
         # Get weights from event object
         weights = event._get_weights_for_type(event.event_type)
@@ -82,27 +81,34 @@ class Participant:
             self.conflict_resolution
         )
 
-    def determine_rank(self):
-        if self.total_score >= 600:
-            self.rank = "Platinum"
-        elif self.total_score >= 500:
-            self.rank = "A"
-        elif self.total_score >= 300:
-            self.rank = "B"
-        elif self.total_score >= 100:
-            self.rank = "C"
+    def determine_rank(self, thresholds):
+        if self.total_score >= thresholds[0]:
+            self.rank = 'Platinum'
+        elif self.total_score >= thresholds[1]:
+            self.rank = 'Gold'
+        elif self.total_score >= thresholds[2]:
+            self.rank = 'Silver'
+        elif self.total_score >= thresholds[3]:
+            self.rank = 'Bronze'
         else:
-            self.rank = "D"
+            self.rank = 'Bronze'
 
-    def award_badge(self):
-        if self.task_completion_rate >= 0.9:
-            return "Gold Badge"
-        elif self.task_completion_rate >= 0.7:
-            return "Silver Badge"
-        elif self.task_completion_rate >= 0.5:
-            return "Bronze Badge"
-        else:
-            return "No Badge"
+    @staticmethod
+    def award_badges(rank, hours_logged, leadership_score, conflict_resolution_score):
+        badges = []
+        if leadership_score >= 8 and conflict_resolution_score >= 8:
+            badges.append("Skills Badge")
+        if hours_logged >= 50:
+            badges.append("Hours Served Badge")
+        if rank == 'Platinum':
+            badges.append("Platinum Achievement Badge")
+        elif rank == 'Gold':
+            badges.append("Gold Achievement Badge")
+        elif rank == 'Silver':
+            badges.append("Silver Achievement Badge")
+        elif rank == 'Bronze':
+            badges.append("Bronze Achievement Badge")
+        return badges
 
     def apply_decay(self):
         # Calculate the total score before applying decay
@@ -118,7 +124,15 @@ class Participant:
         # Set the total score after decay
         self.total_score = total_score_before_decay
 
-def simulate_events(num_events, event_size):  # Function to handle a specific event size
+def simulate_events(num_events, event_size, threshold_type="even_spread"):
+    THRESHOLDS = {
+        "standard": [1000, 800, 600, 400],
+        "competitive": [1500, 900, 700, 500],
+        "strict": [2000, 900, 600, 200]
+    }
+    
+    thresholds = THRESHOLDS.get(threshold_type, THRESHOLDS["standard"])
+
     participants = [
         Participant(name="Osama", base_score=500),
         Participant(name="Iman", base_score=550),
@@ -136,10 +150,7 @@ def simulate_events(num_events, event_size):  # Function to handle a specific ev
         print("-" * 92)
 
         for participant in participants:
-            # Simulate with different metrics per participant based on their base scores
-            # Base scores: Ayoub (600), Iman (550), Osama (500), Fatima (450), Bisma (400)
             event = Event("Test Event", event_size, "2024-01-01", "standard")
-            
             if participant.name == "Ayoub":  # Highest base score (600) - Best performer
                 participant.update_metrics_score(
                     event=event,
@@ -188,90 +199,73 @@ def simulate_events(num_events, event_size):  # Function to handle a specific ev
                 participant.update_metrics_score(
                     event=event,
                     response_time_mins=30,   # Average response time
-                    late_arrivals=1,         # Occasional lateness
+                    late_arrivals=1,         # Some late arrivals
                     early_departures=1,
                     unscheduled_absences=0,
-                    completed_tasks=8,       # Good completion rate
+                    completed_tasks=8,       # Good task completion
                     total_tasks=10,
-                    logged_hours=36,         # Good hours commitment
+                    logged_hours=35,         # Fair hours commitment
                     expected_hours=40,
                     team_completed=8,
                     team_total=10,
-                    actual_time=36,
+                    actual_time=35,
                     planned_time=40,
-                    problem_time=36,
+                    problem_time=35,
                     expected_problem_time=40,
                     successful_solutions=8,
                     total_solutions=10,
                     conflicts_resolved=8,
                     total_conflicts=10
                 )
-            elif participant.name == "Fatima":  # Second lowest (450) - Fair performer
+            elif participant.name == "Bisma":  # Lower score (400) - Moderate performer
                 participant.update_metrics_score(
                     event=event,
-                    response_time_mins=45,   # Below average response
+                    response_time_mins=40,   # Slow response time
                     late_arrivals=1,
-                    early_departures=1,
-                    unscheduled_absences=1,  # Some absences
-                    completed_tasks=7,       # Fair completion rate
+                    early_departures=2,      # Fair attendance
+                    unscheduled_absences=0,
+                    completed_tasks=6,       # Fair completion rate
                     total_tasks=10,
-                    logged_hours=34,         # Below target hours
+                    logged_hours=30,         # Fair hours commitment
                     expected_hours=40,
                     team_completed=7,
                     team_total=10,
-                    actual_time=34,
+                    actual_time=30,
                     planned_time=40,
-                    problem_time=34,
+                    problem_time=30,
                     expected_problem_time=40,
                     successful_solutions=7,
-                    total_solutions=10,
-                    conflicts_resolved=7,
-                    total_conflicts=10
-                )
-            else:  # Bisma - Lowest base score (400) - Needs improvement
-                participant.update_metrics_score(
-                    event=event,
-                    response_time_mins=60,   # Slow response time
-                    late_arrivals=2,         # Frequent lateness
-                    early_departures=2,
-                    unscheduled_absences=1,
-                    completed_tasks=6,       # Lower completion rate
-                    total_tasks=10,
-                    logged_hours=32,         # Significantly below target
-                    expected_hours=40,
-                    team_completed=6,
-                    team_total=10,
-                    actual_time=32,
-                    planned_time=40,
-                    problem_time=32,
-                    expected_problem_time=40,
-                    successful_solutions=6,
                     total_solutions=10,
                     conflicts_resolved=6,
                     total_conflicts=10
                 )
+            elif participant.name == "Fatima":  # Lowest score (450) - Needs improvement
+                participant.update_metrics_score(
+                    event=event,
+                    response_time_mins=60,   # Slow response time
+                    late_arrivals=3,
+                    early_departures=3,      # Frequent departures
+                    unscheduled_absences=1,  # Occasional absences
+                    completed_tasks=5,       # Fair task completion
+                    total_tasks=10,
+                    logged_hours=25,         # Limited hours commitment
+                    expected_hours=40,
+                    team_completed=6,
+                    team_total=10,
+                    actual_time=25,
+                    planned_time=40,
+                    problem_time=25,
+                    expected_problem_time=40,
+                    successful_solutions=5,
+                    total_solutions=10,
+                    conflicts_resolved=5,
+                    total_conflicts=10
+                )
 
-            participant.calculate_event_score(event_size)  # Use the given event size for score calculation
-
-            if participant.name == "Ayoub" and event_number <= 5:
-                participant.inactivity_period += 1
-            else:
-                participant.inactivity_period = 0
-
-            # Apply decay before updating final total score
+            participant.calculate_event_score(event_size)
             participant.apply_decay()
+            participant.total_score += participant.event_score + participant.metrics_score
 
-            # Determine rank and award badge
-            participant.determine_rank()
-            badge = participant.award_badge()
-            print(f"{participant.name:<10} | {participant.base_score:<10.1f} | {participant.metrics_score:<15.2f} | {participant.event_score:<15.2f} | {participant.total_score:<15.1f} | {participant.rank:<6} | {participant.inactivity_period:<10} | Badge: {badge}")
-         # Update base_score to total_score after each event
-            participant.base_score = participant.total_score
-
-        print("=" * 50)  # Separator between events
-
-# Test different event sizes
-event_sizes = [50, 100, 150, 200, 250]  # List of different event sizes to test
-
-for event_size in event_sizes:
-    simulate_events(10, event_size)  # Simulate 10 events for each event size
+            participant.determine_rank(thresholds)
+            inactivity_display = f"{participant.inactivity_period} months" if participant.inactivity_period > 0 else "Active"
+            print(f"{participant.name:<10} | {participant.base_score:<10} | {participant.metrics_score:<15.2f} | {participant.event_score:<15} | {participant.total_score:<15.2f} | {participant.rank:<6} | {inactivity_display:<10}")
