@@ -126,42 +126,42 @@ def run_simulation(num_volunteers=10):
     return final_results, initial_values, new_scores_list
 
 # Run simulation and display results
-simulation_results, initial_values, new_scores_list = run_simulation(5)
+# simulation_results, initial_values, new_scores_list = run_simulation(5)
 
-# Display Initial Values
-print("\nInitial Values:")
-print("-" * 80)
-print(f"{'ID':<8} {'Response':<10} {'Attend':<10} {'Tasks':<10} {'Hours':<10}")
-print("-" * 80)
-for vol_id, values in initial_values.items():
-    print(f"{vol_id:<8} "
-          f"{values['response_time']:<10.1f} "
-          f"{values['attendance']:<10.1f} "
-          f"{values['task_completion']:<10.1f} "
-          f"{values['hours_commitment']:<10.1f}")
+# # Display Initial Values
+# print("\nInitial Values:")
+# print("-" * 80)
+# print(f"{'ID':<8} {'Response':<10} {'Attend':<10} {'Tasks':<10} {'Hours':<10}")
+# print("-" * 80)
+# for vol_id, values in initial_values.items():
+#     print(f"{vol_id:<8} "
+#           f"{values['response_time']:<10.1f} "
+#           f"{values['attendance']:<10.1f} "
+#           f"{values['task_completion']:<10.1f} "
+#           f"{values['hours_commitment']:<10.1f}")
 
-# Display New Values (from current simulation)
-print("\nNew Values:")
-print("-" * 80)
-print(f"{'ID':<8} {'Response':<10} {'Attend':<10} {'Tasks':<10} {'Hours':<10}")
-print("-" * 80)
-for result in new_scores_list:
-    vol_id = result['volunteer_id']
-    print(f"{vol_id:<8} "
-          f"{result['response_time']:<10.1f} "
-          f"{result['attendance']:<10.1f} "
-          f"{result['task_completion']:<10.1f} "
-          f"{result['hours_commitment']:<10.1f}")
+# # Display New Values (from current simulation)
+# print("\nNew Values:")
+# print("-" * 80)
+# print(f"{'ID':<8} {'Response':<10} {'Attend':<10} {'Tasks':<10} {'Hours':<10}")
+# print("-" * 80)
+# for result in new_scores_list:
+#     vol_id = result['volunteer_id']
+#     print(f"{vol_id:<8} "
+#           f"{result['response_time']:<10.1f} "
+#           f"{result['attendance']:<10.1f} "
+#           f"{result['task_completion']:<10.1f} "
+#           f"{result['hours_commitment']:<10.1f}")
 
-# Display Final Results (averages)
-print("\nFinal Results (Average of Initial and New Values):")
-print("-" * 80)
-print(f"{'ID':<8} {'Response':<10} {'Attend':<10} {'Tasks':<10} {'Hours':<10} {'Avg':<10}")
-print("-" * 80)
-for result in simulation_results:
-    print(f"{result['volunteer_id']:<8} "
-          f"{result['response_time']:<10.1f} "
-          f"{result['attendance']:<10.1f} "
-          f"{result['task_completion']:<10.1f} "
-          f"{result['hours_commitment']:<10.1f} "
-          f"{result['average']:<10.1f}") 
+# # Display Final Results (averages)
+# print("\nFinal Results (Average of Initial and New Values):")
+# print("-" * 80)
+# print(f"{'ID':<8} {'Response':<10} {'Attend':<10} {'Tasks':<10} {'Hours':<10} {'Avg':<10}")
+# print("-" * 80)
+# for result in simulation_results:
+#     print(f"{result['volunteer_id']:<8} "
+#           f"{result['response_time']:<10.1f} "
+#           f"{result['attendance']:<10.1f} "
+#           f"{result['task_completion']:<10.1f} "
+#           f"{result['hours_commitment']:<10.1f} "
+#           f"{result['average']:<10.1f}") 
