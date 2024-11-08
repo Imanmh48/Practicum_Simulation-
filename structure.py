@@ -116,12 +116,20 @@ class Participant:
         else:
             total_score_before_decay = self.base_score + self.event_score + self.metrics_score
 
-        # Apply inactivity decay if applicable and rank is Platinum
-        if self.inactivity_period > 3 and self.rank == "Platinum":
-            print(f"Total Score before decay for {self.name}: {total_score_before_decay:.2f}")
-            inactivity_decay = total_score_before_decay * 0.10  # 10% decay for inactivity
-            total_score_before_decay -= inactivity_decay
-            print(f"Decay applied for inactivity to {self.name}: -{inactivity_decay:.2f}")
+        # Apply inactivity decay if inactivity_period > 3, with different rates per rank
+        if self.inactivity_period > 3:
+            decay_rates = {
+                "Platinum": 0.10,  # 10% decay
+                "Gold": 0.07,      # 7% decay
+                "Silver": 0.05,    # 5% decay
+                "Bronze": 0.03     # 3% decay
+            }
+            
+            if self.rank in decay_rates:
+                print(f"Total Score before decay for {self.name}: {total_score_before_decay:.2f}")
+                inactivity_decay = total_score_before_decay * decay_rates[self.rank]
+                total_score_before_decay -= inactivity_decay
+                print(f"Decay applied for inactivity to {self.name} ({self.rank}): -{inactivity_decay:.2f}")
 
         # Set the total score after decay
         self.total_score = total_score_before_decay
