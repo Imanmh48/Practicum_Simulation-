@@ -117,7 +117,7 @@ class Participant:
             total_score_before_decay = self.base_score + self.event_score + self.metrics_score
 
         # Apply inactivity decay if inactivity_period > 3, with different rates per rank
-        if self.inactivity_period > 3:
+        if self.inactivity_period >= 3:
             decay_rates = {
                 "Platinum": 0.10,  # 10% decay
                 "Gold": 0.07,      # 7% decay
@@ -130,7 +130,8 @@ class Participant:
                 inactivity_decay = total_score_before_decay * decay_rates[self.rank]
                 total_score_before_decay -= inactivity_decay
                 print(f"Decay applied for inactivity to {self.name} ({self.rank}): -{inactivity_decay:.2f}")
-
+                self.inactivity_period = 0  # Reset inactivity only when decay is applied
+                
         # Set the total score after decay
         self.total_score = total_score_before_decay
 
@@ -309,20 +310,27 @@ def simulate_events(num_events, event_size):  # Function to handle a specific ev
 
             
 
-            if participant.name == "Ayoub" and event_number <= 5:  # Makes Ayoub inactive for first 5 events
+            # Different inactivity patterns for each participant
+            if participant.name == "Ayoub" and event_number <= 5:  # Inactive for first 5 events
                 participant.inactivity_period += 1
-            else:
-                participant.inactivity_period = 0
-            
+            elif participant.name == "Iman" and 7 <= event_number <= 9:  # Inactive during events 7-9
+                participant.inactivity_period += 1
+            elif participant.name == "Bisma" and event_number % 3 == 0:  # Inactive every 3rd event
+                participant.inactivity_period += 1
+            elif participant.name == "Fatima" and event_number >= 8:  # Inactive for last few events
+                participant.inactivity_period += 1
+           
+
             participant.calculate_event_score(event_size)  # Use the given event size for score calculation
 
             # Apply decay before updating final total score
+            participant.determine_rank()
             participant.apply_decay()
 
             # Calculate the real metrics_score but display 0 if inactive
             display_metrics_score = 0 if participant.inactivity_period >= 1 else participant.metrics_score
             
-            participant.determine_rank()
+            
             badge = participant.award_badge()
             inactivity_display = f"{participant.inactivity_period} months" if participant.inactivity_period > 0 else "Active"
             
