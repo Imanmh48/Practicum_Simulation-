@@ -98,6 +98,7 @@ class Participant:
             self.rank = "Bronze"
         else:
             self.rank = "No Rank"
+    
 
     def award_badge(self):
         if self.task_completion_rate >= 0.9:
@@ -159,24 +160,18 @@ def distrubte_events_across_seasons(num_of_events,num_of_seasons):
             break
     return event_assignment
 
-def simulate_events(num_events, event_size):  # Function to handle a specific event size
-    participants = [
-        Participant(name="Osama", base_score=0),
-        Participant(name="Iman", base_score=250),
-        Participant(name="Ayoub", base_score=601),
-        Participant(name="Bisma", base_score=750),
-        Participant(name="Fatima", base_score=1000)
-    ]
-    the_gap=5 # The frequency of resets this is relevant to the equally distributed events
-    current=0
+def simulate_events(num_events, event_size, participants, start_event_number):
+    the_gap = 5
+    current = 0
     event_distribution = distrubte_events_across_seasons(num_events, 5)
     breakpoint = event_distribution[current]
-    counter = 1 # When the reset happens
-    print(f"\nSimulating with Event Size: {event_size}")  # Print the event size before the events
+    counter = 1
+    
+    print(f"\nSimulating with Event Size: {event_size}")
     print("=" * 80)
     
-    for event_number in range(1, num_events + 1):
-        if (event_number - 1) == breakpoint:  # This is the case of randomly distributed events
+    for event_number in range(start_event_number, start_event_number + num_events):
+        if (event_number - 1) == breakpoint:
             print("Season", counter + 1)
             print("#" * 90)
             # apply_reset(participants)
@@ -340,9 +335,19 @@ def simulate_events(num_events, event_size):  # Function to handle a specific ev
 
         print("=" * 50)  # Separator between events
 
-# Test different event sizes
-event_sizes = [50, 100, 150, 200, 250]  # List of different event sizes to test
+# Initialize participants once
+participants = [
+    Participant(name="Osama", base_score=0),
+    Participant(name="Iman", base_score=250),
+    Participant(name="Ayoub", base_score=601),
+    Participant(name="Bisma", base_score=750),
+    Participant(name="Fatima", base_score=1000)
+]
 
+# Test different event sizes with continuous event numbering
+event_sizes = [50, 100, 150, 200, 250]
+current_event_number = 1
 for event_size in event_sizes:
-    simulate_events(10, event_size)  # Simulate 10 events for each event size
+    simulate_events(4, event_size, participants, current_event_number)
+    current_event_number += 4  # Increment by 2 since we're running 2 events each time
 
