@@ -319,8 +319,9 @@ def simulate_events(num_events, event_size, participants, start_event_number):
             participant.calculate_event_score(event_size)  # Use the given event size for score calculation
 
             # Apply decay before updating final total score
-            participant.determine_rank()
+            
             participant.apply_decay()
+            participant.determine_rank()
 
             # Calculate the real metrics_score but display 0 if inactive
             display_metrics_score = 0 if participant.inactivity_period >= 1 else participant.metrics_score
