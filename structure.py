@@ -87,17 +87,17 @@ class Participant:
             self.conflict_resolution
         )
 
-    def determine_rank(self):
-        if self.total_score >= 600:
-            self.rank = "Platinum"
-        elif self.total_score >= 500:
-            self.rank = "Gold"
-        elif self.total_score >= 300:
-            self.rank = "Silver"
-        elif self.total_score >= 100:
-            self.rank = "Bronze"
+    def determine_rank(self, thresholds):
+        if self.total_score >= thresholds[0]:
+            self.rank = 'Platinum'
+        elif self.total_score >= thresholds[1]:
+            self.rank = 'Gold'
+        elif self.total_score >= thresholds[2]:
+            self.rank = 'Silver'
+        elif self.total_score >= thresholds[3]:
+            self.rank = 'Bronze'
         else:
-            self.rank = "No Rank"
+            self.rank = 'Bronze'
     
 
     def award_badge(self):
@@ -160,7 +160,7 @@ def distrubte_events_across_seasons(num_of_events,num_of_seasons):
             break
     return event_assignment
 
-def simulate_events(num_events, event_size, participants, start_event_number):
+def simulate_events(num_events, event_size, participants, start_event_number, thresholds):
     the_gap = 5
     current = 0
     event_distribution = distrubte_events_across_seasons(num_events, 5)
@@ -321,7 +321,7 @@ def simulate_events(num_events, event_size, participants, start_event_number):
             # Apply decay before updating final total score
             
             participant.apply_decay()
-            participant.determine_rank()
+            participant.determine_rank(thresholds)
 
             # Calculate the real metrics_score but display 0 if inactive
             display_metrics_score = 0 if participant.inactivity_period >= 1 else participant.metrics_score
@@ -345,10 +345,61 @@ participants = [
     Participant(name="Fatima", base_score=1000)
 ]
 
+THRESHOLDS = {
+    "standard": [1000, 800, 600, 400],
+    "competitive": [1500, 900, 700, 500],
+    "strict": [2000, 900, 600, 200]
+}
+
+# Initialize original base scores
+INITIAL_BASE_SCORES = {
+    "Osama": 0,
+    "Iman": 250,
+    "Ayoub": 601,
+    "Bisma": 750,
+    "Fatima": 1000
+}
+
 # Test different event sizes with continuous event numbering
-event_sizes = [50, 100, 150, 200, 250]
+event_sizes = [50, 100, 150, 200, 250] * 4  # Multiply by 4 to get 20 events total
+
+# First simulation with standard thresholds
 current_event_number = 1
-for event_size in event_sizes:
-    simulate_events(4, event_size, participants, current_event_number)
-    current_event_number += 4  # Increment by 2 since we're running 2 events each time
+shuffled_sizes = event_sizes.copy()
+random.shuffle(shuffled_sizes)
+print(f"\nUsing standard thresholds: {THRESHOLDS['standard']}")
+print(f"Shuffled event sizes: {shuffled_sizes}")
+for event_size in shuffled_sizes:
+    simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["standard"])
+    current_event_number += 1
+
+# Reset participants for competitive thresholds
+for participant in participants:
+    participant.base_score = INITIAL_BASE_SCORES[participant.name]
+    participant.total_score = participant.base_score
+    participant.inactivity_period = 0
+
+current_event_number = 1
+shuffled_sizes = event_sizes.copy()
+random.shuffle(shuffled_sizes)
+print(f"\nUsing competitive thresholds: {THRESHOLDS['competitive']}")
+print(f"Shuffled event sizes: {shuffled_sizes}")
+for event_size in shuffled_sizes:
+    simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["competitive"])
+    current_event_number += 1
+
+# Reset participants for strict thresholds
+for participant in participants:
+    participant.base_score = INITIAL_BASE_SCORES[participant.name]
+    participant.total_score = participant.base_score
+    participant.inactivity_period = 0
+
+current_event_number = 1
+shuffled_sizes = event_sizes.copy()
+random.shuffle(shuffled_sizes)
+print(f"\nUsing strict thresholds: {THRESHOLDS['strict']}")
+print(f"Shuffled event sizes: {shuffled_sizes}")
+for event_size in shuffled_sizes:
+    simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["strict"])
+    current_event_number += 1
 
