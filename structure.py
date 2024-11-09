@@ -306,7 +306,7 @@ def simulate_events(num_events, event_size, participants, start_event_number, th
             
 
             # Different inactivity patterns for each participant
-            if participant.name == "Ayoub" and event_number <= 5:  # Inactive for first 5 events
+            if participant.name == "Ayoub" and event_number <= 6:  # Inactive for first 5 events
                 participant.inactivity_period += 1
             elif participant.name == "Iman" and 7 <= event_number <= 9:  # Inactive during events 7-9
                 participant.inactivity_period += 1
@@ -314,18 +314,21 @@ def simulate_events(num_events, event_size, participants, start_event_number, th
                 participant.inactivity_period += 1
             elif participant.name == "Fatima" and event_number >= 8:  # Inactive for last few events
                 participant.inactivity_period += 1
+            else:
+                participant.inactivity_period = 0
            
-
             participant.calculate_event_score(event_size)  # Use the given event size for score calculation
 
             # Apply decay before updating final total score
-            
-            participant.apply_decay()
-            participant.determine_rank(thresholds)
-
+           
             # Calculate the real metrics_score but display 0 if inactive
             display_metrics_score = 0 if participant.inactivity_period >= 1 else participant.metrics_score
+             
+            participant.apply_decay()
             
+
+            participant.determine_rank(thresholds)
+
             
             badge = participant.award_badge()
             inactivity_display = f"{participant.inactivity_period} months" if participant.inactivity_period > 0 else "Active"
