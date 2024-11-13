@@ -419,15 +419,15 @@ counter=0
 for event_size in shuffled_sizes:
     if not switch_between_reset_modes:
         if (current_event_number)==((((counter+1)*len(event_sizes))//number_of_seasons)+1): # this is the case of evenly distributed events accross seasons
-            apply_reset(participants,THRESHOLDS["standard"])
+            apply_reset(participants,THRESHOLDS["competitive"])
             counter+=1
             print("Season",counter+1)
             print("#"*90)
-    simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["standard"])
+    simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["competitive"])
     if switch_between_reset_modes:
         if (current_event_number) == breakpoint:
                 
-                apply_reset(participants,THRESHOLDS["standard"])
+                apply_reset(participants,THRESHOLDS["competitive"])
                 counter += 1
                 try:
                     breakpoint += event_distribution[counter] # this avoids an issue that accurs in the last event
@@ -456,15 +456,15 @@ print("#" * 90)
 for event_size in shuffled_sizes:
     if not switch_between_reset_modes:
         if (current_event_number)==((((counter+1)*len(event_sizes))//number_of_seasons)+1): # this is the case of evenly distributed events accross seasons
-            apply_reset(participants,THRESHOLDS["standard"])
+            apply_reset(participants,THRESHOLDS["strict"])
             counter+=1
             print("Season",counter+1)
             print("#"*90)
-    simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["standard"])
+    simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["strict"])
     if switch_between_reset_modes:
         if (current_event_number) == breakpoint:
                 
-                apply_reset(participants,THRESHOLDS["standard"])
+                apply_reset(participants,THRESHOLDS["strict"])
                 counter += 1
                 try:
                     breakpoint += event_distribution[counter] # this avoids an issue that accurs in the last event
