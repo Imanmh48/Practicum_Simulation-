@@ -2,7 +2,7 @@ import random
 
 from sim1 import VolunteerMetrics
 from Event import Event
-
+random.seed(1)
 class Participant:
     def __init__(self, name, base_score):
         self.name = name
@@ -136,12 +136,26 @@ class Participant:
         # Set the total score after decay
         self.total_score = total_score_before_decay
 
-def apply_reset(list_participants,highest_rank=15000): #this will apply the reset for all classes
+def apply_reset(list_participants,rank_distribution): #this will apply the reset for all classes
+    plat=rank_distribution[0]
+    gold=rank_distribution[1]
+    silver=rank_distribution[2]
     for participant in list_participants:
-        if participant.base_score>=highest_rank: #will change this to be if they are above platinum they will be reset to platinum
-            participant.base_score=highest_rank
+        if participant.base_score>=plat: #will change this to be if they are above platinum they will be reset to platinum
+            participant.base_score=plat
+        elif participant.base_score>=gold:
+            participant.base_score-=100 #demote them by 2 tiers
+            #print("In gold:\t"+participant.name+"\t"+str(participant.base_score))
+        elif participant.base_score>=silver:
+            participant.base_score-=50 #demote by 1 tier
+            #print("In silver:\t"+participant.name+"\t"+str(participant.base_score))
         else:
-            participant.base_score-=50 #will change this value once we determine the ranks
+            participant.base_score-=20 #demote by a small amount because they are already doing bad
+            #print("In bronze:\t"+participant.name+"\t"+str(participant.base_score))
+
+
+def prepare_distributed_reset(event_sizes):
+    return 5,distrubte_events_across_seasons(event_sizes, 5),0 # default values for the number of seasons, current season, list of the season,counter
 
 def distrubte_events_across_seasons(num_of_events,num_of_seasons):
     counter=0
@@ -151,8 +165,6 @@ def distrubte_events_across_seasons(num_of_events,num_of_seasons):
             num_of_event=random.randint(1,num_of_events) #generate a random number of events
             event_assignment.append(num_of_event) # append that number
         if sum(event_assignment)==num_of_events: # make sure that my generated number of event is equal to all_events
-            print("number of events distribution")
-            print(event_assignment)
             break
         counter+=1
         if counter==2000: #safeguard
@@ -161,23 +173,10 @@ def distrubte_events_across_seasons(num_of_events,num_of_seasons):
     return event_assignment
 
 def simulate_events(num_events, event_size, participants, start_event_number, thresholds):
-    the_gap = 5
-    current = 0
-    event_distribution = distrubte_events_across_seasons(num_events, 5)
-    breakpoint = event_distribution[current]
-    counter = 1
-    
+   
     print(f"\nSimulating with Event Size: {event_size}")
     print("=" * 80)
-    
     for event_number in range(start_event_number, start_event_number + num_events):
-        if (event_number - 1) == breakpoint:
-            print("Season", counter + 1)
-            print("#" * 90)
-            # apply_reset(participants)
-            counter += 1
-            current += 1
-            breakpoint += event_distribution[current]
         
         print(f"\nEvent {event_number} (Event Size: {event_size}):")
         print("=" * 50)
@@ -339,6 +338,8 @@ def simulate_events(num_events, event_size, participants, start_event_number, th
 
         print("=" * 50)  # Separator between events
 
+
+switch_between_reset_modes=True # changing the reset methods used below
 # Initialize participants once
 participants = [
     Participant(name="Osama", base_score=0),
@@ -372,10 +373,33 @@ shuffled_sizes = event_sizes.copy()
 random.shuffle(shuffled_sizes)
 print(f"\nUsing standard thresholds: {THRESHOLDS['standard']}")
 print(f"Shuffled event sizes: {shuffled_sizes}")
+number_of_seasons,event_distribution,counter = prepare_distributed_reset(len(event_sizes)) # this is reseting the values, or setting them
+breakpoint = event_distribution[counter]
+if switch_between_reset_modes:
+    print(event_distribution)
+print("Season", counter+1)
+print("#" * 90)     
 for event_size in shuffled_sizes:
+    if not switch_between_reset_modes:
+        if (current_event_number)==((((counter+1)*len(event_sizes))//number_of_seasons)+1): # this is the case of evenly distributed events accross seasons
+            apply_reset(participants,THRESHOLDS["standard"])
+            counter+=1
+            print("Season",counter+1)
+            print("#"*90)
     simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["standard"])
+    if switch_between_reset_modes:
+        if (current_event_number) == breakpoint:
+                
+                apply_reset(participants,THRESHOLDS["standard"])
+                counter += 1
+                try:
+                    breakpoint += event_distribution[counter] # this avoids an issue that accurs in the last event
+                    print("Season", counter+1)
+                    print("#" * 90)
+                except:
+                    pass
+        
     current_event_number += 1
-
 # Reset participants for competitive thresholds
 for participant in participants:
     participant.base_score = INITIAL_BASE_SCORES[participant.name]
@@ -387,10 +411,31 @@ shuffled_sizes = event_sizes.copy()
 random.shuffle(shuffled_sizes)
 print(f"\nUsing competitive thresholds: {THRESHOLDS['competitive']}")
 print(f"Shuffled event sizes: {shuffled_sizes}")
+number_of_seasons,event_distribution,counter = prepare_distributed_reset(len(event_sizes)) # this is reseting the values, or setting them
+breakpoint = event_distribution[counter]
+if switch_between_reset_modes:
+    print(event_distribution)
+counter=0
 for event_size in shuffled_sizes:
-    simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["competitive"])
+    if not switch_between_reset_modes:
+        if (current_event_number)==((((counter+1)*len(event_sizes))//number_of_seasons)+1): # this is the case of evenly distributed events accross seasons
+            apply_reset(participants,THRESHOLDS["standard"])
+            counter+=1
+            print("Season",counter+1)
+            print("#"*90)
+    simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["standard"])
+    if switch_between_reset_modes:
+        if (current_event_number) == breakpoint:
+                
+                apply_reset(participants,THRESHOLDS["standard"])
+                counter += 1
+                try:
+                    breakpoint += event_distribution[counter] # this avoids an issue that accurs in the last event
+                    print("Season", counter+1)
+                    print("#" * 90)
+                except:
+                    pass
     current_event_number += 1
-
 # Reset participants for strict thresholds
 for participant in participants:
     participant.base_score = INITIAL_BASE_SCORES[participant.name]
@@ -402,7 +447,29 @@ shuffled_sizes = event_sizes.copy()
 random.shuffle(shuffled_sizes)
 print(f"\nUsing strict thresholds: {THRESHOLDS['strict']}")
 print(f"Shuffled event sizes: {shuffled_sizes}")
+number_of_seasons,event_distribution,counter = prepare_distributed_reset(len(event_sizes)) # this is reseting the values, or setting them
+breakpoint = event_distribution[counter]
+if switch_between_reset_modes:
+    print(event_distribution)
+print("Season", counter+1)
+print("#" * 90) 
 for event_size in shuffled_sizes:
-    simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["strict"])
+    if not switch_between_reset_modes:
+        if (current_event_number)==((((counter+1)*len(event_sizes))//number_of_seasons)+1): # this is the case of evenly distributed events accross seasons
+            apply_reset(participants,THRESHOLDS["standard"])
+            counter+=1
+            print("Season",counter+1)
+            print("#"*90)
+    simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["standard"])
+    if switch_between_reset_modes:
+        if (current_event_number) == breakpoint:
+                
+                apply_reset(participants,THRESHOLDS["standard"])
+                counter += 1
+                try:
+                    breakpoint += event_distribution[counter] # this avoids an issue that accurs in the last event
+                    print("Season", counter+1)
+                    print("#" * 90)
+                except:
+                    pass
     current_event_number += 1
-
