@@ -111,11 +111,17 @@ class Participant:
             return "No Badge"
 
     def apply_decay(self):
-        # Calculate total score differently based on inactivity
         if self.inactivity_period >= 1:
-            total_score_before_decay = self.base_score + self.event_score  # Exclude metrics_score when inactive
+            total_score_before_decay = self.base_score + self.event_score
         else:
-            total_score_before_decay = self.base_score + self.event_score + self.metrics_score
+            metrics_modifier = 1 + (self.metrics_score / 50)  # 2% to 20% increase
+            
+            if self.base_score == 0:
+                base_value = 100
+            else:
+                base_value = self.base_score
+            
+            total_score_before_decay = (base_value + self.event_score) * metrics_modifier
 
         # Apply inactivity decay if inactivity_period > 3, with different rates per rank
         if self.inactivity_period >= 3:
@@ -173,7 +179,6 @@ def distrubte_events_across_seasons(num_of_events,num_of_seasons):
     return event_assignment
 
 def simulate_events(num_events, event_size, participants, start_event_number, thresholds):
-   
     print(f"\nSimulating with Event Size: {event_size}")
     print("=" * 80)
     for event_number in range(start_event_number, start_event_number + num_events):
@@ -186,123 +191,75 @@ def simulate_events(num_events, event_size, participants, start_event_number, th
         for participant in participants:
             event = Event("Test Event", event_size, "2024-01-01", "standard")
             
-            # Osama (base_score = 0) - New participant, average performance
+            # Generate much more varied random values for each participant
             if participant.name == "Osama":
-                participant.update_metrics_score(
-                    event=event,
-                    response_time_mins=35,   # Average response time
-                    late_arrivals=1,         # Some attendance issues expected
-                    early_departures=1,
-                    unscheduled_absences=1,
-                    completed_tasks=7,       # Average completion rate
-                    total_tasks=10,
-                    logged_hours=35,         # Average hours commitment
-                    expected_hours=40,
-                    team_completed=7,
-                    team_total=10,
-                    actual_time=35,
-                    planned_time=40,
-                    problem_time=35,
-                    expected_problem_time=40,
-                    successful_solutions=7,
-                    total_solutions=10,
-                    conflicts_resolved=7,
-                    total_conflicts=10
-                )
-            # Iman (base_score = 250) - Developing performer
+                response_time = random.randint(45, 90)       # Poor response time
+                late_arrivals = random.randint(2, 4)         # Frequent attendance issues
+                completed_tasks = random.randint(2, 6)       # Low completion rate
+                team_completed = random.randint(2, 6)        # Poor team performance
+                successful_solutions = random.randint(2, 5)   # Struggles with solutions
+                conflicts_resolved = random.randint(1, 4)    # Poor conflict resolution
             elif participant.name == "Iman":
-                participant.update_metrics_score(
-                    event=event,
-                    response_time_mins=30,   # Better than average
-                    late_arrivals=1,
-                    early_departures=1,
-                    unscheduled_absences=0,
-                    completed_tasks=8,       # Good completion rate
-                    total_tasks=10,
-                    logged_hours=36,
-                    expected_hours=40,
-                    team_completed=8,
-                    team_total=10,
-                    actual_time=36,
-                    planned_time=40,
-                    problem_time=36,
-                    expected_problem_time=40,
-                    successful_solutions=8,
-                    total_solutions=10,
-                    conflicts_resolved=8,
-                    total_conflicts=10
-                )
-            # Ayoub (base_score = 500) - Experienced performer
+                response_time = random.randint(30, 60)       # Below average response
+                late_arrivals = random.randint(1, 3)         # Some attendance issues
+                completed_tasks = random.randint(3, 7)       # Below average completion
+                team_completed = random.randint(3, 7)        # Below average team performance
+                successful_solutions = random.randint(3, 6)   # Below average solutions
+                conflicts_resolved = random.randint(2, 6)    # Below average conflict resolution
             elif participant.name == "Ayoub":
-                participant.update_metrics_score(
-                    event=event,
-                    response_time_mins=20,   # Very good response time
-                    late_arrivals=0,         # Strong attendance
-                    early_departures=0,
-                    unscheduled_absences=0,
-                    completed_tasks=9,       # Very good completion
-                    total_tasks=10,
-                    logged_hours=38,
-                    expected_hours=40,
-                    team_completed=9,
-                    team_total=10,
-                    actual_time=38,
-                    planned_time=40,
-                    problem_time=38,
-                    expected_problem_time=40,
-                    successful_solutions=9,
-                    total_solutions=10,
-                    conflicts_resolved=9,
-                    total_conflicts=10
-                )
-            # Bisma (base_score = 750) - Senior performer
+                response_time = random.randint(20, 45)       # Average response
+                late_arrivals = random.randint(0, 2)         # Occasional issues
+                completed_tasks = random.randint(4, 8)       # Average completion
+                team_completed = random.randint(4, 8)        # Average team performance
+                successful_solutions = random.randint(4, 7)   # Average solutions
+                conflicts_resolved = random.randint(4, 7)    # Average conflict resolution
             elif participant.name == "Bisma":
-                participant.update_metrics_score(
-                    event=event,
-                    response_time_mins=15,   # Excellent response time
-                    late_arrivals=0,
-                    early_departures=0,
-                    unscheduled_absences=0,
-                    completed_tasks=9,
-                    total_tasks=10,
-                    logged_hours=39,
-                    expected_hours=40,
-                    team_completed=9,
-                    team_total=10,
-                    actual_time=39,
-                    planned_time=40,
-                    problem_time=39,
-                    expected_problem_time=40,
-                    successful_solutions=9,
-                    total_solutions=10,
-                    conflicts_resolved=9,
-                    total_conflicts=10
-                )
-            # Fatima (base_score = 1000) - Expert performer
-            else:
-                participant.update_metrics_score(
-                    event=event,
-                    response_time_mins=10,   # Outstanding response time
-                    late_arrivals=0,         # Perfect attendance
-                    early_departures=0,
-                    unscheduled_absences=0,
-                    completed_tasks=10,      # Perfect completion
-                    total_tasks=10,
-                    logged_hours=40,         # Full commitment
-                    expected_hours=40,
-                    team_completed=10,
-                    team_total=10,
-                    actual_time=40,
-                    planned_time=40,
-                    problem_time=40,
-                    expected_problem_time=40,
-                    successful_solutions=10,
-                    total_solutions=10,
-                    conflicts_resolved=10,
-                    total_conflicts=10
-                )
+                response_time = random.randint(10, 30)       # Good response
+                late_arrivals = random.randint(0, 1)         # Rare issues
+                completed_tasks = random.randint(6, 9)       # Good completion
+                team_completed = random.randint(6, 9)        # Good team performance
+                successful_solutions = random.randint(2, 5)   # Struggles with solutions
+                conflicts_resolved = random.randint(1, 4)    # Poor conflict resolution
+            else:  # Fatima
+                response_time = random.randint(5, 35)       # Usually excellent but not perfect
+                late_arrivals = random.randint(0, 1)        # Very rarely late
+                completed_tasks = random.randint(6, 10)     # Generally good but can drop
 
-            
+            # More variable common random values
+            early_departures = random.randint(0, 2)
+            unscheduled_absences = random.randint(0, 2)
+            total_tasks = 10
+            logged_hours = random.randint(25, 40)          # More variable hours
+            expected_hours = 40
+            team_total = 10
+            actual_time = random.randint(25, 40)           # More variable time management
+            planned_time = 40
+            problem_time = random.randint(25, 40)          # More variable problem solving
+            expected_problem_time = 40
+            total_solutions = 10
+            total_conflicts = 10
+
+            participant.update_metrics_score(
+                event=event,
+                response_time_mins=response_time,
+                late_arrivals=late_arrivals,
+                early_departures=early_departures,
+                unscheduled_absences=unscheduled_absences,
+                completed_tasks=completed_tasks,
+                total_tasks=total_tasks,
+                logged_hours=logged_hours,
+                expected_hours=expected_hours,
+                team_completed=team_completed,
+                team_total=team_total,
+                actual_time=actual_time,
+                planned_time=planned_time,
+                problem_time=problem_time,
+                expected_problem_time=expected_problem_time,
+                successful_solutions=successful_solutions,
+                total_solutions=total_solutions,
+                conflicts_resolved=conflicts_resolved,
+                total_conflicts=total_conflicts
+            )
 
             # Different inactivity patterns for each participant
             if participant.name == "Ayoub" and event_number <= 6:  # Inactive for first 5 events
