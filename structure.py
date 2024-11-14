@@ -111,11 +111,17 @@ class Participant:
             return "No Badge"
 
     def apply_decay(self):
-        # Calculate total score differently based on inactivity
         if self.inactivity_period >= 1:
-            total_score_before_decay = self.base_score + self.event_score  # Exclude metrics_score when inactive
+            total_score_before_decay = self.base_score + self.event_score
         else:
-            total_score_before_decay = self.base_score + self.event_score + self.metrics_score
+            metrics_modifier = 1 + (self.metrics_score / 50)  # 2% to 20% increase
+            
+            if self.base_score == 0:
+                base_value = 100
+            else:
+                base_value = self.base_score
+            
+            total_score_before_decay = (base_value + self.event_score) * metrics_modifier
 
         # Apply inactivity decay if inactivity_period > 3, with different rates per rank
         if self.inactivity_period >= 3:
