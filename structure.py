@@ -2,7 +2,7 @@ import random
 
 from sim1 import VolunteerMetrics
 from Event import Event
-from config import NUMBER_OF_SEASONS, THRESHOLDS
+from config import NUMBER_OF_SEASONS, THRESHOLDS , INACTIVITY_THRESHOLDS, DECAY_RATES, INITIAL_BASE_SCORES, EVENT_SIZES
 #random.seed(1)
 class Participant:
     def __init__(self, name, base_score):
@@ -126,16 +126,9 @@ class Participant:
 
         # Apply inactivity decay if inactivity_period > threshold
         if self.inactivity_period >= inactivity_threshold:
-            decay_rates = {
-                "Platinum": 0.10,  # 10% decay
-                "Gold": 0.07,      # 7% decay
-                "Silver": 0.05,    # 5% decay
-                "Bronze": 0.03     # 3% decay
-            }
-            
-            if self.rank in decay_rates:
+            if self.rank in DECAY_RATES:
                 print(f"Total Score before decay for {self.name}: {total_score_before_decay:.2f}")
-                inactivity_decay = total_score_before_decay * decay_rates[self.rank]
+                inactivity_decay = total_score_before_decay * DECAY_RATES[self.rank]
                 total_score_before_decay -= inactivity_decay
                 print(f"Decay applied for inactivity to {self.name} ({self.rank}): -{inactivity_decay:.2f}")
         
@@ -297,28 +290,19 @@ def simulate_events(num_events, event_size, participants, start_event_number, th
 switch_between_reset_modes=True # changing the reset methods used below
 # Initialize participants once
 participants = [
-    Participant(name="Osama", base_score=0),
-    Participant(name="Iman", base_score=250),
-    Participant(name="Ayoub", base_score=601),
-    Participant(name="Bisma", base_score=750),
-    Participant(name="Fatima", base_score=1000)
+    Participant(name="Osama", base_score=INITIAL_BASE_SCORES["Osama"]),
+    Participant(name="Iman", base_score=INITIAL_BASE_SCORES["Iman"]),
+    Participant(name="Ayoub", base_score=INITIAL_BASE_SCORES["Ayoub"]),
+    Participant(name="Bisma", base_score=INITIAL_BASE_SCORES["Bisma"]),
+    Participant(name="Fatima", base_score=INITIAL_BASE_SCORES["Fatima"])
 ]
 
-# Initialize original base scores
-INITIAL_BASE_SCORES = {
-    "Osama": 0,
-    "Iman": 250,
-    "Ayoub": 601,
-    "Bisma": 750,
-    "Fatima": 1000
-}
-
 # Test different event sizes with continuous event numbering
-event_sizes = [50, 100, 150, 200, 250] * 4  # Multiply by 4 to get 20 events total
+shuffled_sizes = EVENT_SIZES.copy()
 
-inactivity_thresholds = [1,2, 3, 4]
 
-for inactivity_threshold in inactivity_thresholds:
+
+for inactivity_threshold in INACTIVITY_THRESHOLDS:
     print(f"\n\n{'='*50}")
     print(f"TESTING WITH INACTIVITY THRESHOLD = {inactivity_threshold}")
     print(f"{'='*50}\n")
@@ -331,11 +315,11 @@ for inactivity_threshold in inactivity_thresholds:
 
     # First simulation with standard thresholds
     current_event_number = 1
-    shuffled_sizes = event_sizes.copy()
+    shuffled_sizes = EVENT_SIZES.copy()
     random.shuffle(shuffled_sizes)
     print(f"\nUsing standard thresholds: {THRESHOLDS['standard']}")
     print(f"Shuffled event sizes: {shuffled_sizes}")
-    number_of_seasons,event_distribution,counter = prepare_distributed_reset(len(event_sizes))
+    number_of_seasons,event_distribution,counter = prepare_distributed_reset(len(EVENT_SIZES))
     breakpoint = event_distribution[counter]
     if switch_between_reset_modes:
         print(event_distribution)
@@ -343,7 +327,7 @@ for inactivity_threshold in inactivity_thresholds:
     print("#" * 90)     
     for event_size in shuffled_sizes:
         if not switch_between_reset_modes:
-            if (current_event_number)==((((counter+1)*len(event_sizes))//number_of_seasons)+1):
+            if (current_event_number)==((((counter+1)*len(EVENT_SIZES))//number_of_seasons)+1):
                 apply_reset(participants,THRESHOLDS["standard"])
                 counter+=1
                 print("Season",counter+1)
@@ -368,18 +352,18 @@ for inactivity_threshold in inactivity_thresholds:
         participant.inactivity_period = 0
 
     current_event_number = 1
-    shuffled_sizes = event_sizes.copy()
+    shuffled_sizes = EVENT_SIZES.copy()
     random.shuffle(shuffled_sizes)
     print(f"\nUsing competitive thresholds: {THRESHOLDS['competitive']}")
     print(f"Shuffled event sizes: {shuffled_sizes}")
-    number_of_seasons,event_distribution,counter = prepare_distributed_reset(len(event_sizes))
+    number_of_seasons,event_distribution,counter = prepare_distributed_reset(len(EVENT_SIZES))
     breakpoint = event_distribution[counter]
     if switch_between_reset_modes:
         print(event_distribution)
     counter=0
     for event_size in shuffled_sizes:
         if not switch_between_reset_modes:
-            if (current_event_number)==((((counter+1)*len(event_sizes))//number_of_seasons)+1):
+            if (current_event_number)==((((counter+1)*len(EVENT_SIZES))//number_of_seasons)+1):
                 apply_reset(participants,THRESHOLDS["competitive"])
                 counter+=1
                 print("Season",counter+1)
@@ -404,11 +388,11 @@ for inactivity_threshold in inactivity_thresholds:
         participant.inactivity_period = 0
 
     current_event_number = 1
-    shuffled_sizes = event_sizes.copy()
+    shuffled_sizes = EVENT_SIZES.copy()
     random.shuffle(shuffled_sizes)
     print(f"\nUsing strict thresholds: {THRESHOLDS['strict']}")
     print(f"Shuffled event sizes: {shuffled_sizes}")
-    number_of_seasons,event_distribution,counter = prepare_distributed_reset(len(event_sizes))
+    number_of_seasons,event_distribution,counter = prepare_distributed_reset(len(EVENT_SIZES))
     breakpoint = event_distribution[counter]
     if switch_between_reset_modes:
         print(event_distribution)
@@ -416,7 +400,7 @@ for inactivity_threshold in inactivity_thresholds:
     print("#" * 90)
     for event_size in shuffled_sizes:
         if not switch_between_reset_modes:
-            if (current_event_number)==((((counter+1)*len(event_sizes))//number_of_seasons)+1):
+            if (current_event_number)==((((counter+1)*len(EVENT_SIZES))//number_of_seasons)+1):
                 apply_reset(participants,THRESHOLDS["strict"])
                 counter+=1
                 print("Season",counter+1)
