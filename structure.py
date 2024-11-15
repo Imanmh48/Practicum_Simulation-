@@ -2,7 +2,7 @@ import random
 
 from sim1 import VolunteerMetrics
 from Event import Event
-from config import NUMBER_OF_SEASONS, THRESHOLDS , INACTIVITY_THRESHOLDS, DECAY_RATES, INITIAL_BASE_SCORES, EVENT_SIZES
+from config import NUMBER_OF_SEASONS, THRESHOLDS , INACTIVITY_THRESHOLDS, DECAY_RATES, INITIAL_BASE_SCORES, EVENT_SIZES, METRICS_DECLINE_THRESHOLD, METRICS_DECLINE_DECAY_RATE
 #random.seed(1)
 class Participant:
     def __init__(self, name, base_score):
@@ -89,33 +89,34 @@ class Participant:
         )
 
     def determine_rank(self, thresholds):
+        # Add a maximum score cap for each rank
         if self.total_score >= thresholds[0]:
+            if self.total_score > thresholds[0] * 1.5:  # Cap Platinum growth
+                self.total_score = thresholds[0] * 1.5
             self.rank = 'Platinum'
         elif self.total_score >= thresholds[1]:
+            if self.total_score > thresholds[0] * 0.95:  # Cap Gold near Platinum threshold
+                self.total_score = thresholds[0] * 0.95
             self.rank = 'Gold'
         elif self.total_score >= thresholds[2]:
+            if self.total_score > thresholds[1] * 0.95:  # Cap Silver near Gold threshold
+                self.total_score = thresholds[1] * 0.95
             self.rank = 'Silver'
         elif self.total_score >= thresholds[3]:
+            if self.total_score > thresholds[2] * 0.95:  # Cap Bronze near Silver threshold
+                self.total_score = thresholds[2] * 0.95
             self.rank = 'Bronze'
         else:
             self.rank = 'Bronze'
     
 
-    def award_badge(self):
-        if self.task_completion_rate >= 0.9:
-            return "Gold Badge"
-        elif self.task_completion_rate >= 0.7:
-            return "Silver Badge"
-        elif self.task_completion_rate >= 0.5:
-            return "Bronze Badge"
-        else:
-            return "No Badge"
-
     def apply_decay(self, inactivity_threshold=3):
+        # Store the initial calculation before any decay
         if self.inactivity_period >= 1:
             total_score_before_decay = self.base_score + self.event_score
         else:
-            metrics_modifier = 1 + (self.metrics_score / 50)  # 2% to 20% increase
+            # Reduce the metrics modifier impact
+            metrics_modifier = 1 + (self.metrics_score / 100)  # Changed from 50 to 100 - now 1% to 10% increase
             
             if self.base_score == 0:
                 base_value = 100
@@ -124,15 +125,26 @@ class Participant:
             
             total_score_before_decay = (base_value + self.event_score) * metrics_modifier
 
-        # Apply inactivity decay if inactivity_period > threshold
+        # Increase decay rates for higher ranks
         if self.inactivity_period >= inactivity_threshold:
             if self.rank in DECAY_RATES:
-                print(f"Total Score before decay for {self.name}: {total_score_before_decay:.2f}")
-                inactivity_decay = total_score_before_decay * DECAY_RATES[self.rank]
+                decay_multiplier = 1.5 if self.rank in ['Platinum', 'Gold'] else 1.0  # Higher ranks decay faster
+                inactivity_decay = total_score_before_decay * (DECAY_RATES[self.rank] * decay_multiplier)
                 total_score_before_decay -= inactivity_decay
                 print(f"Decay applied for inactivity to {self.name} ({self.rank}): -{inactivity_decay:.2f}")
         
-        # Set the total score after decay
+        # Apply metrics decline decay
+        previous_metrics = getattr(self, '_previous_metrics_score', self.metrics_score)
+        if hasattr(self, '_previous_metrics_score') and (previous_metrics - self.metrics_score) > METRICS_DECLINE_THRESHOLD:
+            print(f"Total Score before decay: {total_score_before_decay:.2f}")
+            metrics_decay = total_score_before_decay * METRICS_DECLINE_DECAY_RATE
+            total_score_before_decay -= metrics_decay
+            print(f"Decay applied for metrics decline to {self.name}: -{metrics_decay:.2f} (Metrics dropped from {previous_metrics:.2f} to {self.metrics_score:.2f})")
+        
+        # Store current metrics score for next comparison
+        self._previous_metrics_score = self.metrics_score
+        
+        # Set the total score after all decays
         self.total_score = total_score_before_decay
 
 def apply_reset(list_participants,rank_distribution): #this will apply the reset for all classes
@@ -202,37 +214,77 @@ def simulate_events(num_events, event_size, participants, start_event_number, th
             
             # Generate much more varied random values for each participant
             if participant.name == "Osama":
-                response_time = random.randint(45, 90)       # Poor response time
-                late_arrivals = random.randint(2, 4)         # Frequent attendance issues
-                completed_tasks = random.randint(2, 6)       # Low completion rate
-                team_completed = random.randint(2, 6)        # Poor team performance
-                successful_solutions = random.randint(2, 5)   # Struggles with solutions
-                conflicts_resolved = random.randint(1, 4)    # Poor conflict resolution
+                # More extreme variations for Osama
+                if event_number % 2 == 0:  # Every other event
+                    response_time = random.randint(5, 15)        # Excellent response time
+                    late_arrivals = 0                           # No late arrivals
+                    completed_tasks = random.randint(9, 10)      # Nearly perfect completion
+                    team_completed = random.randint(9, 10)       # Excellent team performance
+                    successful_solutions = random.randint(9, 10)  # Excellent problem solving
+                    conflicts_resolved = random.randint(9, 10)   # Excellent conflict resolution
+                else:
+                    response_time = random.randint(80, 120)      # Very poor response time
+                    late_arrivals = random.randint(3, 5)        # Many late arrivals
+                    completed_tasks = random.randint(1, 3)       # Very poor completion
+                    team_completed = random.randint(1, 3)        # Very poor team performance
+                    successful_solutions = random.randint(1, 3)   # Very poor problem solving
+                    conflicts_resolved = random.randint(1, 3)    # Very poor conflict resolution
+                
             elif participant.name == "Iman":
-                response_time = random.randint(30, 60)       # Below average response
-                late_arrivals = random.randint(1, 3)         # Some attendance issues
-                completed_tasks = random.randint(3, 7)       # Below average completion
-                team_completed = random.randint(3, 7)        # Below average team performance
-                successful_solutions = random.randint(3, 6)   # Below average solutions
-                conflicts_resolved = random.randint(2, 6)    # Below average conflict resolution
+                # Even more dramatic swings for Iman
+                if event_number % 3 == 0:  # Every third event
+                    response_time = random.randint(5, 10)
+                    late_arrivals = 0
+                    completed_tasks = 10
+                    team_completed = 10
+                    successful_solutions = 10
+                    conflicts_resolved = 10
+                else:
+                    response_time = random.randint(90, 120)
+                    late_arrivals = random.randint(4, 5)
+                    completed_tasks = random.randint(0, 2)
+                    team_completed = random.randint(0, 2)
+                    successful_solutions = random.randint(0, 2)
+                    conflicts_resolved = random.randint(0, 2)
             elif participant.name == "Ayoub":
-                response_time = random.randint(20, 45)       # Average response
-                late_arrivals = random.randint(0, 2)         # Occasional issues
-                completed_tasks = random.randint(4, 8)       # Average completion
-                team_completed = random.randint(4, 8)        # Average team performance
-                successful_solutions = random.randint(4, 7)   # Average solutions
-                conflicts_resolved = random.randint(4, 7)    # Average conflict resolution
+                if event_number % 4 == 0:  # Every 4th event
+                    response_time = random.randint(80, 120)      # Poor response
+                    late_arrivals = random.randint(3, 5)         # Many issues
+                    completed_tasks = random.randint(1, 4)       # Poor completion
+                    team_completed = random.randint(1, 4)        # Poor team performance
+                    successful_solutions = random.randint(1, 4)   # Poor solutions
+                    conflicts_resolved = random.randint(1, 4)    # Poor conflict resolution
+                else:
+                    response_time = random.randint(20, 45)       # Average response
+                    late_arrivals = random.randint(0, 2)         # Occasional issues
+                    completed_tasks = random.randint(4, 8)       # Average completion
+                    team_completed = random.randint(4, 8)        # Average team performance
+                    successful_solutions = random.randint(4, 7)   # Average solutions
+                    conflicts_resolved = random.randint(4, 7)    # Average conflict resolution
             elif participant.name == "Bisma":
-                response_time = random.randint(10, 30)       # Good response
-                late_arrivals = random.randint(0, 1)         # Rare issues
-                completed_tasks = random.randint(6, 9)       # Good completion
-                team_completed = random.randint(6, 9)        # Good team performance
-                successful_solutions = random.randint(2, 5)   # Struggles with solutions
-                conflicts_resolved = random.randint(1, 4)    # Poor conflict resolution
+                if event_number % 3 == 0:  # Every 3rd event
+                    response_time = random.randint(90, 120)      # Very poor response
+                    late_arrivals = random.randint(3, 5)         # Many issues
+                    completed_tasks = random.randint(1, 3)       # Poor completion
+                    team_completed = random.randint(1, 3)        # Poor team performance
+                    successful_solutions = random.randint(1, 3)   # Poor problem solving
+                    conflicts_resolved = random.randint(1, 3)    # Poor conflict resolution
+                else:
+                    response_time = random.randint(10, 30)       # Good response
+                    late_arrivals = random.randint(0, 1)         # Rare issues
+                    completed_tasks = random.randint(6, 9)       # Good completion
+                    team_completed = random.randint(6, 9)        # Good team performance
+                    successful_solutions = random.randint(6, 9)   # Good problem solving
+                    conflicts_resolved = random.randint(6, 9)    # Good conflict resolution
             else:  # Fatima
-                response_time = random.randint(5, 35)       # Usually excellent but not perfect
-                late_arrivals = random.randint(0, 1)        # Very rarely late
-                completed_tasks = random.randint(6, 10)     # Generally good but can drop
+                if event_number % 5 == 0:  # Every 5th event
+                    response_time = random.randint(70, 100)     # Poor performance
+                    late_arrivals = random.randint(2, 4)        # Multiple issues
+                    completed_tasks = random.randint(2, 5)      # Below average
+                else:
+                    response_time = random.randint(5, 35)       # Usually excellent
+                    late_arrivals = random.randint(0, 1)        # Very rarely late
+                    completed_tasks = random.randint(6, 10)     # Generally good
 
             # More variable common random values
             early_departures = random.randint(0, 2)
@@ -279,10 +331,9 @@ def simulate_events(num_events, event_size, participants, start_event_number, th
             # Update base_score to previous event's total score
             participant.base_score = previous_total
 
-            badge = participant.award_badge()
             inactivity_display = f"{participant.inactivity_period} months" if participant.inactivity_period > 0 else "Active"
             
-            print(f"{participant.name:<10} | {participant.base_score:<10.1f} | {participant.metrics_score:<15.2f} | {participant.event_score:<15.2f} | {participant.total_score:<15.1f} | {participant.rank:<6} | {participant.inactivity_period:<10} | Badge: {badge}")
+            print(f"{participant.name:<10} | {participant.base_score:<10.1f} | {participant.metrics_score:<15.2f} | {participant.event_score:<15.2f} | {participant.total_score:<15.1f} | {participant.rank:<6} | {participant.inactivity_period:<10}")
 
         print("=" * 50)
 
