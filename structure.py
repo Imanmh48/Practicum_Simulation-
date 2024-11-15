@@ -2,7 +2,7 @@ import random
 
 from sim1 import VolunteerMetrics
 from Event import Event
-from config import NUMBER_OF_SEASONS, THRESHOLDS
+from config import NUMBER_OF_SEASONS, THRESHOLDS , INACTIVITY_THRESHOLDS, DECAY_RATES, INITIAL_BASE_SCORES, EVENT_SIZES, METRICS_DECLINE_THRESHOLD, METRICS_DECLINE_DECAY_RATE,EVENT_SCORE_CONFIG
 #random.seed(1)
 class Participant:
     def __init__(self, name, base_score):
@@ -33,16 +33,20 @@ class Participant:
         if self.inactivity_period >= 1:
             self.event_score = 0
             return
+        
+        # Ensure minimum event size
+        if event_size < 10:
+            raise ValueError(f"Event size cannot be less than 10 (got {event_size})")
 
-        # Otherwise, assign event_score based on event_size thresholds
-        if event_size > 200:
+        # Direct threshold checks from largest to smallest
+        if event_size >= 200:
+            self.event_score = 50
+        elif event_size >= 100:
             self.event_score = 100
-        elif event_size > 100:
+        elif event_size >= 50:
             self.event_score = 150
-        elif event_size > 50:
+        else:  # event_size <= 50
             self.event_score = 200
-        else:
-            self.event_score = 300  # Default score for small events
     
     def update_metrics_score(self, event, response_time_mins, late_arrivals, early_departures, 
                            unscheduled_absences, completed_tasks, total_tasks,
@@ -101,19 +105,11 @@ class Participant:
             self.rank = 'Bronze'
     
 
-    def award_badge(self):
-        if self.task_completion_rate >= 0.9:
-            return "Gold Badge"
-        elif self.task_completion_rate >= 0.7:
-            return "Silver Badge"
-        elif self.task_completion_rate >= 0.5:
-            return "Bronze Badge"
-        else:
-            return "No Badge"
-
-    def apply_decay(self):
-        if self.inactivity_period >= 1:
-            total_score_before_decay = self.base_score + self.event_score
+    def apply_decay(self, inactivity_threshold=3):
+        # Calculate the current total score first
+        previous_metrics = getattr(self, '_previous_metrics_score', self.metrics_score)
+        if self.inactivity_period >= 1 or (hasattr(self, '_previous_metrics_score') and (previous_metrics - self.metrics_score) > METRICS_DECLINE_THRESHOLD):
+            current_total = self.total_score
         else:
             metrics_modifier = 1 + (self.metrics_score / 50)  # 2% to 20% increase
             
@@ -122,28 +118,36 @@ class Participant:
             else:
                 base_value = self.base_score
             
-            total_score_before_decay = (base_value + self.event_score) * metrics_modifier
+            current_total = (base_value + self.event_score) * metrics_modifier
 
-        # Apply inactivity decay if inactivity_period > 3, with different rates per rank
-        if self.inactivity_period >= 3:
-            decay_rates = {
-                "Platinum": 0.10,  # 10% decay
-                "Gold": 0.07,      # 7% decay
-                "Silver": 0.05,    # 5% decay
-                "Bronze": 0.03     # 3% decay
-            }
-            
-            if self.rank in decay_rates:
+        # Store current_total for decay calculations
+        total_score_before_decay = current_total
+
+                # Apply inactivity decay if inactivity_period > threshold
+        if self.inactivity_period >= inactivity_threshold:
+            if self.rank in DECAY_RATES:
                 print(f"Total Score before decay for {self.name}: {total_score_before_decay:.2f}")
-                inactivity_decay = total_score_before_decay * decay_rates[self.rank]
+                inactivity_decay = total_score_before_decay * DECAY_RATES[self.rank]
                 total_score_before_decay -= inactivity_decay
                 print(f"Decay applied for inactivity to {self.name} ({self.rank}): -{inactivity_decay:.2f}")
-                self.inactivity_period = 0  # Reset inactivity only when decay is applied
-                
-        # Set the total score after decay
+        
+        # Apply metrics decline decay using total_score_before_decay
+        previous_metrics = getattr(self, '_previous_metrics_score', self.metrics_score)
+        original_score = total_score_before_decay  # Store the original score before decay
+        if hasattr(self, '_previous_metrics_score') and (previous_metrics - self.metrics_score) > METRICS_DECLINE_THRESHOLD:
+            metrics_decay = original_score * METRICS_DECLINE_DECAY_RATE
+            total_score_before_decay -= metrics_decay
+            print(f"Total Score before metrics decay: {original_score:.2f}")
+            print(f"Decay applied for metrics decline to {self.name}: -{metrics_decay:.2f} (Metrics dropped from {previous_metrics:.2f} to {self.metrics_score:.2f})")
+        
+        # Store current metrics score for next comparison
+        self._previous_metrics_score = self.metrics_score
+        
+        # Set the final score
         self.total_score = total_score_before_decay
 
 def apply_reset(list_participants,rank_distribution): #this will apply the reset for all classes
+
     plat=rank_distribution[0]
     gold=rank_distribution[1]
     silver=rank_distribution[2]
@@ -179,7 +183,7 @@ def distrubte_events_across_seasons(num_of_events,num_of_seasons):
             break
     return event_assignment
 
-def simulate_events(num_events, event_size, participants, start_event_number, thresholds):
+def simulate_events(num_events, event_size, participants, start_event_number, thresholds, inactivity_threshold=3):
     print(f"\nSimulating with Event Size: {event_size}")
     print("=" * 80)
     for event_number in range(start_event_number, start_event_number + num_events):
@@ -190,41 +194,97 @@ def simulate_events(num_events, event_size, participants, start_event_number, th
         print("-" * 92)
 
         for participant in participants:
+            # Store the previous total score before calculating new scores
+            previous_total = participant.total_score
+            
+            event = Event("Test Event", event_size, "2024-01-01", "standard")
+            
+            # Track inactivity without resetting
+            was_inactive = False
+            if (participant.name == "Ayoub" and event_number < 6) or \
+               (participant.name == "Iman" and 7 <= event_number <= 9) or \
+               (participant.name == "Bisma" and event_number % 3 == 0) or \
+               (participant.name == "Fatima" and 12 <= event_number <= 16):  # Now inactive only between events 12-16
+                participant.inactivity_period += 1
+                was_inactive = True
+            else:
+                participant.inactivity_period = 0
+
             event = Event("Test Event", event_size, "2024-01-01", "standard")
             
             # Generate much more varied random values for each participant
             if participant.name == "Osama":
-                response_time = random.randint(45, 90)       # Poor response time
-                late_arrivals = random.randint(2, 4)         # Frequent attendance issues
-                completed_tasks = random.randint(2, 6)       # Low completion rate
-                team_completed = random.randint(2, 6)        # Poor team performance
-                successful_solutions = random.randint(2, 5)   # Struggles with solutions
-                conflicts_resolved = random.randint(1, 4)    # Poor conflict resolution
+                # More extreme variations for Osama
+                if event_number % 2 == 0:  # Every other event
+                    response_time = random.randint(5, 15)        # Excellent response time
+                    late_arrivals = 0                           # No late arrivals
+                    completed_tasks = random.randint(9, 10)      # Nearly perfect completion
+                    team_completed = random.randint(9, 10)       # Excellent team performance
+                    successful_solutions = random.randint(9, 10)  # Excellent problem solving
+                    conflicts_resolved = random.randint(9, 10)   # Excellent conflict resolution
+                else:
+                    response_time = random.randint(80, 120)      # Very poor response time
+                    late_arrivals = random.randint(3, 5)        # Many late arrivals
+                    completed_tasks = random.randint(1, 3)       # Very poor completion
+                    team_completed = random.randint(1, 3)        # Very poor team performance
+                    successful_solutions = random.randint(1, 3)   # Very poor problem solving
+                    conflicts_resolved = random.randint(1, 3)    # Very poor conflict resolution
+                
             elif participant.name == "Iman":
-                response_time = random.randint(30, 60)       # Below average response
-                late_arrivals = random.randint(1, 3)         # Some attendance issues
-                completed_tasks = random.randint(3, 7)       # Below average completion
-                team_completed = random.randint(3, 7)        # Below average team performance
-                successful_solutions = random.randint(3, 6)   # Below average solutions
-                conflicts_resolved = random.randint(2, 6)    # Below average conflict resolution
+                # Even more dramatic swings for Iman
+                if event_number % 3 == 0:  # Every third event
+                    response_time = random.randint(5, 10)
+                    late_arrivals = 0
+                    completed_tasks = 10
+                    team_completed = 10
+                    successful_solutions = 10
+                    conflicts_resolved = 10
+                else:
+                    response_time = random.randint(90, 120)
+                    late_arrivals = random.randint(4, 5)
+                    completed_tasks = random.randint(0, 2)
+                    team_completed = random.randint(0, 2)
+                    successful_solutions = random.randint(0, 2)
+                    conflicts_resolved = random.randint(0, 2)
             elif participant.name == "Ayoub":
-                response_time = random.randint(20, 45)       # Average response
-                late_arrivals = random.randint(0, 2)         # Occasional issues
-                completed_tasks = random.randint(4, 8)       # Average completion
-                team_completed = random.randint(4, 8)        # Average team performance
-                successful_solutions = random.randint(4, 7)   # Average solutions
-                conflicts_resolved = random.randint(4, 7)    # Average conflict resolution
+                if event_number % 4 == 0:  # Every 4th event
+                    response_time = random.randint(80, 120)      # Poor response
+                    late_arrivals = random.randint(3, 5)         # Many issues
+                    completed_tasks = random.randint(1, 4)       # Poor completion
+                    team_completed = random.randint(1, 4)        # Poor team performance
+                    successful_solutions = random.randint(1, 4)   # Poor solutions
+                    conflicts_resolved = random.randint(1, 4)    # Poor conflict resolution
+                else:
+                    response_time = random.randint(20, 45)       # Average response
+                    late_arrivals = random.randint(0, 2)         # Occasional issues
+                    completed_tasks = random.randint(4, 8)       # Average completion
+                    team_completed = random.randint(4, 8)        # Average team performance
+                    successful_solutions = random.randint(4, 7)   # Average solutions
+                    conflicts_resolved = random.randint(4, 7)    # Average conflict resolution
             elif participant.name == "Bisma":
-                response_time = random.randint(10, 30)       # Good response
-                late_arrivals = random.randint(0, 1)         # Rare issues
-                completed_tasks = random.randint(6, 9)       # Good completion
-                team_completed = random.randint(6, 9)        # Good team performance
-                successful_solutions = random.randint(2, 5)   # Struggles with solutions
-                conflicts_resolved = random.randint(1, 4)    # Poor conflict resolution
+                if event_number % 3 == 0:  # Every 3rd event
+                    response_time = random.randint(90, 120)      # Very poor response
+                    late_arrivals = random.randint(3, 5)         # Many issues
+                    completed_tasks = random.randint(1, 3)       # Poor completion
+                    team_completed = random.randint(1, 3)        # Poor team performance
+                    successful_solutions = random.randint(1, 3)   # Poor problem solving
+                    conflicts_resolved = random.randint(1, 3)    # Poor conflict resolution
+                else:
+                    response_time = random.randint(10, 30)       # Good response
+                    late_arrivals = random.randint(0, 1)         # Rare issues
+                    completed_tasks = random.randint(6, 9)       # Good completion
+                    team_completed = random.randint(6, 9)        # Good team performance
+                    successful_solutions = random.randint(6, 9)   # Good problem solving
+                    conflicts_resolved = random.randint(6, 9)    # Good conflict resolution
             else:  # Fatima
-                response_time = random.randint(5, 35)       # Usually excellent but not perfect
-                late_arrivals = random.randint(0, 1)        # Very rarely late
-                completed_tasks = random.randint(6, 10)     # Generally good but can drop
+                if event_number % 5 == 0:  # Every 5th event
+                    response_time = random.randint(70, 100)     # Poor performance
+                    late_arrivals = random.randint(2, 4)        # Multiple issues
+                    completed_tasks = random.randint(2, 5)      # Below average
+                else:
+                    response_time = random.randint(5, 35)       # Usually excellent
+                    late_arrivals = random.randint(0, 1)        # Very rarely late
+                    completed_tasks = random.randint(6, 10)     # Generally good
 
             # More variable common random values
             early_departures = random.randint(0, 2)
@@ -239,189 +299,173 @@ def simulate_events(num_events, event_size, participants, start_event_number, th
             expected_problem_time = 40
             total_solutions = 10
             total_conflicts = 10
-
-            participant.update_metrics_score(
-                event=event,
-                response_time_mins=response_time,
-                late_arrivals=late_arrivals,
-                early_departures=early_departures,
-                unscheduled_absences=unscheduled_absences,
-                completed_tasks=completed_tasks,
-                total_tasks=total_tasks,
-                logged_hours=logged_hours,
-                expected_hours=expected_hours,
-                team_completed=team_completed,
-                team_total=team_total,
-                actual_time=actual_time,
-                planned_time=planned_time,
-                problem_time=problem_time,
-                expected_problem_time=expected_problem_time,
-                successful_solutions=successful_solutions,
-                total_solutions=total_solutions,
-                conflicts_resolved=conflicts_resolved,
-                total_conflicts=total_conflicts
-            )
-
-            # Different inactivity patterns for each participant
-            if participant.name == "Ayoub" and event_number <= 6:  # Inactive for first 5 events
-                participant.inactivity_period += 1
-            elif participant.name == "Iman" and 7 <= event_number <= 9:  # Inactive during events 7-9
-                participant.inactivity_period += 1
-            elif participant.name == "Bisma" and event_number % 3 == 0:  # Inactive every 3rd event
-                participant.inactivity_period += 1
-            elif participant.name == "Fatima" and event_number >= 8:  # Inactive for last few events
-                participant.inactivity_period += 1
-            else:
-                participant.inactivity_period = 0
-           
-            participant.calculate_event_score(event_size)  # Use the given event size for score calculation
-
-            # Apply decay before updating final total score
-           
-            # Calculate the real metrics_score but display 0 if inactive
-            display_metrics_score = 0 if participant.inactivity_period >= 1 else participant.metrics_score
-             
-            participant.apply_decay()
             
-
+            # Only update metrics if participant is active
+            if not was_inactive:
+                participant.update_metrics_score(
+                    event=event,
+                    response_time_mins=response_time,
+                    late_arrivals=late_arrivals,
+                    early_departures=early_departures,
+                    unscheduled_absences=unscheduled_absences,
+                    completed_tasks=completed_tasks,
+                    total_tasks=total_tasks,
+                    logged_hours=logged_hours,
+                    expected_hours=expected_hours,
+                    team_completed=team_completed,
+                    team_total=team_total,
+                    actual_time=actual_time,
+                    planned_time=planned_time,
+                    problem_time=problem_time,
+                    expected_problem_time=expected_problem_time,
+                    successful_solutions=successful_solutions,
+                    total_solutions=total_solutions,
+                    conflicts_resolved=conflicts_resolved,
+                    total_conflicts=total_conflicts
+                )
+            
+            participant.calculate_event_score(event_size)
             participant.determine_rank(thresholds)
-
+            participant.apply_decay(inactivity_threshold=inactivity_threshold)
+            participant.determine_rank(thresholds)
             
-            badge = participant.award_badge()
+            # Update base_score to previous event's total score
+            participant.base_score = previous_total
+
             inactivity_display = f"{participant.inactivity_period} months" if participant.inactivity_period > 0 else "Active"
             
-            # Use display_metrics_score for printing
-            print(f"{participant.name:<10} | {participant.base_score:<10.1f} | {display_metrics_score:<15.2f} | {participant.event_score:<15.2f} | {participant.total_score:<15.1f} | {participant.rank:<6} | {participant.inactivity_period:<10} | Badge: {badge}")
-            participant.base_score = participant.total_score
+            print(f"{participant.name:<10} | {participant.base_score:<10.1f} | {participant.metrics_score:<15.2f} | {participant.event_score:<15.2f} | {participant.total_score:<15.1f} | {participant.rank:<6} | {participant.inactivity_period:<10}")
 
-        print("=" * 50)  # Separator between events
+        print("=" * 50)
 
 
 switch_between_reset_modes=True # changing the reset methods used below
 # Initialize participants once
 participants = [
-    Participant(name="Osama", base_score=0),
-    Participant(name="Iman", base_score=250),
-    Participant(name="Ayoub", base_score=601),
-    Participant(name="Bisma", base_score=750),
-    Participant(name="Fatima", base_score=1000)
+    Participant(name="Osama", base_score=INITIAL_BASE_SCORES["Osama"]),
+    Participant(name="Iman", base_score=INITIAL_BASE_SCORES["Iman"]),
+    Participant(name="Ayoub", base_score=INITIAL_BASE_SCORES["Ayoub"]),
+    Participant(name="Bisma", base_score=INITIAL_BASE_SCORES["Bisma"]),
+    Participant(name="Fatima", base_score=INITIAL_BASE_SCORES["Fatima"])
 ]
 
-# Initialize original base scores
-INITIAL_BASE_SCORES = {
-    "Osama": 0,
-    "Iman": 250,
-    "Ayoub": 601,
-    "Bisma": 750,
-    "Fatima": 1000
-}
-
 # Test different event sizes with continuous event numbering
-event_sizes = [50, 100, 150, 200, 250] * 4  # Multiply by 4 to get 20 events total
+shuffled_sizes = EVENT_SIZES.copy()
 
-# First simulation with standard thresholds
-current_event_number = 1
-shuffled_sizes = event_sizes.copy()
-random.shuffle(shuffled_sizes)
-print(f"\nUsing standard thresholds: {THRESHOLDS['standard']}")
-print(f"Shuffled event sizes: {shuffled_sizes}")
-number_of_seasons,event_distribution,counter = prepare_distributed_reset(len(event_sizes)) # this is reseting the values, or setting them
-breakpoint = event_distribution[counter]
-if switch_between_reset_modes:
-    print(event_distribution)
-print("Season", counter+1)
-print("#" * 90)     
-for event_size in shuffled_sizes:
-    if not switch_between_reset_modes:
-        if (current_event_number)==((((counter+1)*len(event_sizes))//number_of_seasons)+1): # this is the case of evenly distributed events accross seasons
-            apply_reset(participants,THRESHOLDS["standard"])
-            counter+=1
-            print("Season",counter+1)
-            print("#"*90)
-    simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["standard"])
+
+
+for inactivity_threshold in INACTIVITY_THRESHOLDS:
+    print(f"\n\n{'='*50}")
+    print(f"TESTING WITH INACTIVITY THRESHOLD = {inactivity_threshold}")
+    print(f"{'='*50}\n")
+
+    # Reset participants for new threshold test
+    for participant in participants:
+        participant.base_score = INITIAL_BASE_SCORES[participant.name]
+        participant.total_score = participant.base_score
+        participant.inactivity_period = 0
+
+    # First simulation with standard thresholds
+    current_event_number = 1
+    shuffled_sizes = EVENT_SIZES.copy()
+    random.shuffle(shuffled_sizes)
+    print(f"\nUsing standard thresholds: {THRESHOLDS['standard']}")
+    print(f"Shuffled event sizes: {shuffled_sizes}")
+    number_of_seasons,event_distribution,counter = prepare_distributed_reset(len(EVENT_SIZES))
+    breakpoint = event_distribution[counter]
     if switch_between_reset_modes:
-        if (current_event_number) == breakpoint:
-                
+        print(event_distribution)
+    print("Season", counter+1)
+    print("#" * 90)     
+    for event_size in shuffled_sizes:
+        if not switch_between_reset_modes:
+            if (current_event_number)==((((counter+1)*len(EVENT_SIZES))//number_of_seasons)+1):
+                apply_reset(participants,THRESHOLDS["standard"])
+                counter+=1
+                print("Season",counter+1)
+                print("#"*90)
+        simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["standard"], inactivity_threshold)
+        if switch_between_reset_modes:
+            if (current_event_number) == breakpoint:
                 apply_reset(participants,THRESHOLDS["standard"])
                 counter += 1
                 try:
-                    breakpoint += event_distribution[counter] # this avoids an issue that accurs in the last event
+                    breakpoint += event_distribution[counter]
                     print("Season", counter+1)
                     print("#" * 90)
                 except:
                     pass
-        
-    current_event_number += 1
-# Reset participants for competitive thresholds
-for participant in participants:
-    participant.base_score = INITIAL_BASE_SCORES[participant.name]
-    participant.total_score = participant.base_score
-    participant.inactivity_period = 0
+        current_event_number += 1
 
-current_event_number = 1
-shuffled_sizes = event_sizes.copy()
-random.shuffle(shuffled_sizes)
-print(f"\nUsing competitive thresholds: {THRESHOLDS['competitive']}")
-print(f"Shuffled event sizes: {shuffled_sizes}")
-number_of_seasons,event_distribution,counter = prepare_distributed_reset(len(event_sizes)) # this is reseting the values, or setting them
-breakpoint = event_distribution[counter]
-if switch_between_reset_modes:
-    print(event_distribution)
-counter=0
-for event_size in shuffled_sizes:
-    if not switch_between_reset_modes:
-        if (current_event_number)==((((counter+1)*len(event_sizes))//number_of_seasons)+1): # this is the case of evenly distributed events accross seasons
-            apply_reset(participants,THRESHOLDS["competitive"])
-            counter+=1
-            print("Season",counter+1)
-            print("#"*90)
-    simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["competitive"])
+    # Reset participants for competitive thresholds
+    for participant in participants:
+        participant.base_score = INITIAL_BASE_SCORES[participant.name]
+        participant.total_score = participant.base_score
+        participant.inactivity_period = 0
+
+    current_event_number = 1
+    shuffled_sizes = EVENT_SIZES.copy()
+    random.shuffle(shuffled_sizes)
+    print(f"\nUsing competitive thresholds: {THRESHOLDS['competitive']}")
+    print(f"Shuffled event sizes: {shuffled_sizes}")
+    number_of_seasons,event_distribution,counter = prepare_distributed_reset(len(EVENT_SIZES))
+    breakpoint = event_distribution[counter]
     if switch_between_reset_modes:
-        if (current_event_number) == breakpoint:
-                
+        print(event_distribution)
+    counter=0
+    for event_size in shuffled_sizes:
+        if not switch_between_reset_modes:
+            if (current_event_number)==((((counter+1)*len(EVENT_SIZES))//number_of_seasons)+1):
+                apply_reset(participants,THRESHOLDS["competitive"])
+                counter+=1
+                print("Season",counter+1)
+                print("#"*90)
+        simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["competitive"], inactivity_threshold)
+        if switch_between_reset_modes:
+            if (current_event_number) == breakpoint:
                 apply_reset(participants,THRESHOLDS["competitive"])
                 counter += 1
                 try:
-                    breakpoint += event_distribution[counter] # this avoids an issue that accurs in the last event
+                    breakpoint += event_distribution[counter]
                     print("Season", counter+1)
                     print("#" * 90)
                 except:
                     pass
-    current_event_number += 1
-# Reset participants for strict thresholds
-for participant in participants:
-    participant.base_score = INITIAL_BASE_SCORES[participant.name]
-    participant.total_score = participant.base_score
-    participant.inactivity_period = 0
+        current_event_number += 1
 
-current_event_number = 1
-shuffled_sizes = event_sizes.copy()
-random.shuffle(shuffled_sizes)
-print(f"\nUsing strict thresholds: {THRESHOLDS['strict']}")
-print(f"Shuffled event sizes: {shuffled_sizes}")
-number_of_seasons,event_distribution,counter = prepare_distributed_reset(len(event_sizes)) # this is reseting the values, or setting them
-breakpoint = event_distribution[counter]
-if switch_between_reset_modes:
-    print(event_distribution)
-print("Season", counter+1)
-print("#" * 90) 
-for event_size in shuffled_sizes:
-    if not switch_between_reset_modes:
-        if (current_event_number)==((((counter+1)*len(event_sizes))//number_of_seasons)+1): # this is the case of evenly distributed events accross seasons
-            apply_reset(participants,THRESHOLDS["strict"])
-            counter+=1
-            print("Season",counter+1)
-            print("#"*90)
-    simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["strict"])
+    # Reset participants for strict thresholds
+    for participant in participants:
+        participant.base_score = INITIAL_BASE_SCORES[participant.name]
+        participant.total_score = participant.base_score
+        participant.inactivity_period = 0
+
+    current_event_number = 1
+    shuffled_sizes = EVENT_SIZES.copy()
+    random.shuffle(shuffled_sizes)
+    print(f"\nUsing strict thresholds: {THRESHOLDS['strict']}")
+    print(f"Shuffled event sizes: {shuffled_sizes}")
+    number_of_seasons,event_distribution,counter = prepare_distributed_reset(len(EVENT_SIZES))
+    breakpoint = event_distribution[counter]
     if switch_between_reset_modes:
-        if (current_event_number) == breakpoint:
-                
+        print(event_distribution)
+    print("Season", counter+1)
+    print("#" * 90)
+    for event_size in shuffled_sizes:
+        if not switch_between_reset_modes:
+            if (current_event_number)==((((counter+1)*len(EVENT_SIZES))//number_of_seasons)+1):
+                apply_reset(participants,THRESHOLDS["strict"])
+                counter+=1
+                print("Season",counter+1)
+                print("#"*90)
+        simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["strict"], inactivity_threshold)
+        if switch_between_reset_modes:
+            if (current_event_number) == breakpoint:
                 apply_reset(participants,THRESHOLDS["strict"])
                 counter += 1
                 try:
-                    breakpoint += event_distribution[counter] # this avoids an issue that accurs in the last event
+                    breakpoint += event_distribution[counter]
                     print("Season", counter+1)
                     print("#" * 90)
                 except:
                     pass
-    current_event_number += 1
+        current_event_number += 1
