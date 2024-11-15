@@ -2,7 +2,8 @@ import random
 
 from sim1 import VolunteerMetrics
 from Event import Event
-random.seed(1)
+from config import NUMBER_OF_SEASONS, THRESHOLDS
+#random.seed(1)
 class Participant:
     def __init__(self, name, base_score):
         self.name = name
@@ -161,7 +162,7 @@ def apply_reset(list_participants,rank_distribution): #this will apply the reset
 
 
 def prepare_distributed_reset(event_sizes):
-    return 5,distrubte_events_across_seasons(event_sizes, 5),0 # default values for the number of seasons, current season, list of the season,counter
+    return NUMBER_OF_SEASONS, distrubte_events_across_seasons(event_sizes, NUMBER_OF_SEASONS), 0
 
 def distrubte_events_across_seasons(num_of_events,num_of_seasons):
     counter=0
@@ -305,12 +306,6 @@ participants = [
     Participant(name="Bisma", base_score=750),
     Participant(name="Fatima", base_score=1000)
 ]
-
-THRESHOLDS = {
-    "standard": [1000, 800, 600, 400],
-    "competitive": [1500, 900, 700, 500],
-    "strict": [2000, 900, 600, 200]
-}
 
 # Initialize original base scores
 INITIAL_BASE_SCORES = {
