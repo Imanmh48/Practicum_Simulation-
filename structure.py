@@ -2,7 +2,8 @@ import random
 
 from sim1 import VolunteerMetrics
 from Event import Event
-random.seed(1)
+from config import NUMBER_OF_SEASONS, THRESHOLDS
+#random.seed(1)
 class Participant:
     def __init__(self, name, base_score):
         self.name = name
@@ -111,12 +112,17 @@ class Participant:
             return "No Badge"
 
     def apply_decay(self, inactivity_threshold=3):
-        # For inactive participants, use their previous total score
-        # For active participants, calculate new total score
         if self.inactivity_period >= 1:
-            total_score_before_decay = self.total_score
+            total_score_before_decay = self.base_score + self.event_score
         else:
-            total_score_before_decay = self.base_score + self.event_score + self.metrics_score
+            metrics_modifier = 1 + (self.metrics_score / 50)  # 2% to 20% increase
+            
+            if self.base_score == 0:
+                base_value = 100
+            else:
+                base_value = self.base_score
+            
+            total_score_before_decay = (base_value + self.event_score) * metrics_modifier
 
         # Apply inactivity decay if inactivity_period > threshold
         if self.inactivity_period >= inactivity_threshold:
@@ -155,7 +161,7 @@ def apply_reset(list_participants,rank_distribution): #this will apply the reset
 
 
 def prepare_distributed_reset(event_sizes):
-    return 5,distrubte_events_across_seasons(event_sizes, 5),0 # default values for the number of seasons, current season, list of the season,counter
+    return NUMBER_OF_SEASONS, distrubte_events_across_seasons(event_sizes, NUMBER_OF_SEASONS), 0
 
 def distrubte_events_across_seasons(num_of_events,num_of_seasons):
     counter=0
@@ -247,12 +253,6 @@ participants = [
     Participant(name="Bisma", base_score=750),
     Participant(name="Fatima", base_score=1000)
 ]
-
-THRESHOLDS = {
-    "standard": [1000, 800, 600, 400],
-    "competitive": [1500, 900, 700, 500],
-    "strict": [2000, 900, 600, 200]
-}
 
 # Initialize original base scores
 INITIAL_BASE_SCORES = {
