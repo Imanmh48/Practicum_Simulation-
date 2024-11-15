@@ -8,7 +8,7 @@ THRESHOLDS = {
     "strict": [2000, 900, 600, 200]
 } 
 
-INACTIVITY_THRESHOLDS = [1,2, 3, 4]
+INACTIVITY_THRESHOLDS = [1, 2, 3, 4]
 
 DECAY_RATES = {
     "Platinum": 0.20,  # 10% decay
@@ -31,3 +31,8 @@ EVENT_SIZES = [50, 100, 150, 200, 250] * 4  # Multiply by 4 to get 20 events tot
 METRICS_DECLINE_THRESHOLD = 2.0  # Threshold for metrics score decline
 
 METRICS_DECLINE_DECAY_RATE = 0.15 
+
+EVENT_SCORE_CONFIG = {
+    'thresholds': [200, 100, 50, 10],  # Size thresholds in descending order
+    'scores': [50, 100, 150, 200]     # Corresponding scores
+}

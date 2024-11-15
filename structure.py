@@ -2,7 +2,7 @@ import random
 
 from sim1 import VolunteerMetrics
 from Event import Event
-from config import NUMBER_OF_SEASONS, THRESHOLDS , INACTIVITY_THRESHOLDS, DECAY_RATES, INITIAL_BASE_SCORES, EVENT_SIZES, METRICS_DECLINE_THRESHOLD, METRICS_DECLINE_DECAY_RATE
+from config import NUMBER_OF_SEASONS, THRESHOLDS , INACTIVITY_THRESHOLDS, DECAY_RATES, INITIAL_BASE_SCORES, EVENT_SIZES, METRICS_DECLINE_THRESHOLD, METRICS_DECLINE_DECAY_RATE,EVENT_SCORE_CONFIG
 #random.seed(1)
 class Participant:
     def __init__(self, name, base_score):
@@ -33,16 +33,20 @@ class Participant:
         if self.inactivity_period >= 1:
             self.event_score = 0
             return
+        
+        # Ensure minimum event size
+        if event_size < 10:
+            raise ValueError(f"Event size cannot be less than 10 (got {event_size})")
 
-        # Otherwise, assign event_score based on event_size thresholds
-        if event_size > 200:
+        # Direct threshold checks from largest to smallest
+        if event_size >= 200:
+            self.event_score = 50
+        elif event_size >= 100:
             self.event_score = 100
-        elif event_size > 100:
+        elif event_size >= 50:
             self.event_score = 150
-        elif event_size > 50:
+        else:  # event_size <= 50
             self.event_score = 200
-        else:
-            self.event_score = 300  # Default score for small events
     
     def update_metrics_score(self, event, response_time_mins, late_arrivals, early_departures, 
                            unscheduled_absences, completed_tasks, total_tasks,
@@ -89,65 +93,61 @@ class Participant:
         )
 
     def determine_rank(self, thresholds):
-        # Add a maximum score cap for each rank
         if self.total_score >= thresholds[0]:
-            if self.total_score > thresholds[0] * 1.5:  # Cap Platinum growth
-                self.total_score = thresholds[0] * 1.5
             self.rank = 'Platinum'
         elif self.total_score >= thresholds[1]:
-            if self.total_score > thresholds[0] * 0.95:  # Cap Gold near Platinum threshold
-                self.total_score = thresholds[0] * 0.95
             self.rank = 'Gold'
         elif self.total_score >= thresholds[2]:
-            if self.total_score > thresholds[1] * 0.95:  # Cap Silver near Gold threshold
-                self.total_score = thresholds[1] * 0.95
             self.rank = 'Silver'
         elif self.total_score >= thresholds[3]:
-            if self.total_score > thresholds[2] * 0.95:  # Cap Bronze near Silver threshold
-                self.total_score = thresholds[2] * 0.95
             self.rank = 'Bronze'
         else:
             self.rank = 'Bronze'
     
 
     def apply_decay(self, inactivity_threshold=3):
-        # Store the initial calculation before any decay
-        if self.inactivity_period >= 1:
-            total_score_before_decay = self.base_score + self.event_score
+        # Calculate the current total score first
+        previous_metrics = getattr(self, '_previous_metrics_score', self.metrics_score)
+        if self.inactivity_period >= 1 or (hasattr(self, '_previous_metrics_score') and (previous_metrics - self.metrics_score) > METRICS_DECLINE_THRESHOLD):
+            current_total = self.total_score
         else:
-            # Reduce the metrics modifier impact
-            metrics_modifier = 1 + (self.metrics_score / 100)  # Changed from 50 to 100 - now 1% to 10% increase
+            metrics_modifier = 1 + (self.metrics_score / 50)  # 2% to 20% increase
             
             if self.base_score == 0:
                 base_value = 100
             else:
                 base_value = self.base_score
             
-            total_score_before_decay = (base_value + self.event_score) * metrics_modifier
+            current_total = (base_value + self.event_score) * metrics_modifier
 
-        # Increase decay rates for higher ranks
+        # Store current_total for decay calculations
+        total_score_before_decay = current_total
+
+                # Apply inactivity decay if inactivity_period > threshold
         if self.inactivity_period >= inactivity_threshold:
             if self.rank in DECAY_RATES:
-                decay_multiplier = 1.5 if self.rank in ['Platinum', 'Gold'] else 1.0  # Higher ranks decay faster
-                inactivity_decay = total_score_before_decay * (DECAY_RATES[self.rank] * decay_multiplier)
+                print(f"Total Score before decay for {self.name}: {total_score_before_decay:.2f}")
+                inactivity_decay = total_score_before_decay * DECAY_RATES[self.rank]
                 total_score_before_decay -= inactivity_decay
                 print(f"Decay applied for inactivity to {self.name} ({self.rank}): -{inactivity_decay:.2f}")
         
-        # Apply metrics decline decay
+        # Apply metrics decline decay using total_score_before_decay
         previous_metrics = getattr(self, '_previous_metrics_score', self.metrics_score)
+        original_score = total_score_before_decay  # Store the original score before decay
         if hasattr(self, '_previous_metrics_score') and (previous_metrics - self.metrics_score) > METRICS_DECLINE_THRESHOLD:
-            print(f"Total Score before decay: {total_score_before_decay:.2f}")
-            metrics_decay = total_score_before_decay * METRICS_DECLINE_DECAY_RATE
+            metrics_decay = original_score * METRICS_DECLINE_DECAY_RATE
             total_score_before_decay -= metrics_decay
+            print(f"Total Score before metrics decay: {original_score:.2f}")
             print(f"Decay applied for metrics decline to {self.name}: -{metrics_decay:.2f} (Metrics dropped from {previous_metrics:.2f} to {self.metrics_score:.2f})")
         
         # Store current metrics score for next comparison
         self._previous_metrics_score = self.metrics_score
         
-        # Set the total score after all decays
+        # Set the final score
         self.total_score = total_score_before_decay
 
 def apply_reset(list_participants,rank_distribution): #this will apply the reset for all classes
+
     plat=rank_distribution[0]
     gold=rank_distribution[1]
     silver=rank_distribution[2]
@@ -325,6 +325,7 @@ def simulate_events(num_events, event_size, participants, start_event_number, th
                 )
             
             participant.calculate_event_score(event_size)
+            participant.determine_rank(thresholds)
             participant.apply_decay(inactivity_threshold=inactivity_threshold)
             participant.determine_rank(thresholds)
             
