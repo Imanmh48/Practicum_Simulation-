@@ -199,34 +199,84 @@ def simulate_events(num_events, event_size, participants, start_event_number, th
             if (participant.name == "Ayoub" and event_number < 6) or \
                (participant.name == "Iman" and 7 <= event_number <= 9) or \
                (participant.name == "Bisma" and event_number % 3 == 0) or \
-               (participant.name == "Fatima" and event_number >= 8):
+               (participant.name == "Fatima" and 12 <= event_number <= 16):  # Now inactive only between events 12-16
                 participant.inactivity_period += 1
                 was_inactive = True
             else:
                 participant.inactivity_period = 0
+
+            event = Event("Test Event", event_size, "2024-01-01", "standard")
+            
+            # Generate much more varied random values for each participant
+            if participant.name == "Osama":
+                response_time = random.randint(45, 90)       # Poor response time
+                late_arrivals = random.randint(2, 4)         # Frequent attendance issues
+                completed_tasks = random.randint(2, 6)       # Low completion rate
+                team_completed = random.randint(2, 6)        # Poor team performance
+                successful_solutions = random.randint(2, 5)   # Struggles with solutions
+                conflicts_resolved = random.randint(1, 4)    # Poor conflict resolution
+            elif participant.name == "Iman":
+                response_time = random.randint(30, 60)       # Below average response
+                late_arrivals = random.randint(1, 3)         # Some attendance issues
+                completed_tasks = random.randint(3, 7)       # Below average completion
+                team_completed = random.randint(3, 7)        # Below average team performance
+                successful_solutions = random.randint(3, 6)   # Below average solutions
+                conflicts_resolved = random.randint(2, 6)    # Below average conflict resolution
+            elif participant.name == "Ayoub":
+                response_time = random.randint(20, 45)       # Average response
+                late_arrivals = random.randint(0, 2)         # Occasional issues
+                completed_tasks = random.randint(4, 8)       # Average completion
+                team_completed = random.randint(4, 8)        # Average team performance
+                successful_solutions = random.randint(4, 7)   # Average solutions
+                conflicts_resolved = random.randint(4, 7)    # Average conflict resolution
+            elif participant.name == "Bisma":
+                response_time = random.randint(10, 30)       # Good response
+                late_arrivals = random.randint(0, 1)         # Rare issues
+                completed_tasks = random.randint(6, 9)       # Good completion
+                team_completed = random.randint(6, 9)        # Good team performance
+                successful_solutions = random.randint(2, 5)   # Struggles with solutions
+                conflicts_resolved = random.randint(1, 4)    # Poor conflict resolution
+            else:  # Fatima
+                response_time = random.randint(5, 35)       # Usually excellent but not perfect
+                late_arrivals = random.randint(0, 1)        # Very rarely late
+                completed_tasks = random.randint(6, 10)     # Generally good but can drop
+
+            # More variable common random values
+            early_departures = random.randint(0, 2)
+            unscheduled_absences = random.randint(0, 2)
+            total_tasks = 10
+            logged_hours = random.randint(25, 40)          # More variable hours
+            expected_hours = 40
+            team_total = 10
+            actual_time = random.randint(25, 40)           # More variable time management
+            planned_time = 40
+            problem_time = random.randint(25, 40)          # More variable problem solving
+            expected_problem_time = 40
+            total_solutions = 10
+            total_conflicts = 10
             
             # Only update metrics if participant is active
             if not was_inactive:
                 participant.update_metrics_score(
                     event=event,
-                    response_time_mins=35,   # Average response time
-                    late_arrivals=1,         # Some attendance issues expected
-                    early_departures=1,
-                    unscheduled_absences=1,
-                    completed_tasks=7,       # Average completion rate
-                    total_tasks=10,
-                    logged_hours=35,         # Average hours commitment
-                    expected_hours=40,
-                    team_completed=7,
-                    team_total=10,
-                    actual_time=35,
-                    planned_time=40,
-                    problem_time=35,
-                    expected_problem_time=40,
-                    successful_solutions=7,
-                    total_solutions=10,
-                    conflicts_resolved=7,
-                    total_conflicts=10
+                    response_time_mins=response_time,
+                    late_arrivals=late_arrivals,
+                    early_departures=early_departures,
+                    unscheduled_absences=unscheduled_absences,
+                    completed_tasks=completed_tasks,
+                    total_tasks=total_tasks,
+                    logged_hours=logged_hours,
+                    expected_hours=expected_hours,
+                    team_completed=team_completed,
+                    team_total=team_total,
+                    actual_time=actual_time,
+                    planned_time=planned_time,
+                    problem_time=problem_time,
+                    expected_problem_time=expected_problem_time,
+                    successful_solutions=successful_solutions,
+                    total_solutions=total_solutions,
+                    conflicts_resolved=conflicts_resolved,
+                    total_conflicts=total_conflicts
                 )
             
             participant.calculate_event_score(event_size)
