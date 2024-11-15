@@ -110,15 +110,16 @@ class Participant:
         else:
             return "No Badge"
 
-    def apply_decay(self):
-        # Calculate total score differently based on inactivity
+    def apply_decay(self, inactivity_threshold=3):
+        # For inactive participants, use their previous total score
+        # For active participants, calculate new total score
         if self.inactivity_period >= 1:
-            total_score_before_decay = self.base_score + self.event_score  # Exclude metrics_score when inactive
+            total_score_before_decay = self.total_score
         else:
             total_score_before_decay = self.base_score + self.event_score + self.metrics_score
 
-        # Apply inactivity decay if inactivity_period > 3, with different rates per rank
-        if self.inactivity_period >= 3:
+        # Apply inactivity decay if inactivity_period > threshold
+        if self.inactivity_period >= inactivity_threshold:
             decay_rates = {
                 "Platinum": 0.10,  # 10% decay
                 "Gold": 0.07,      # 7% decay
@@ -131,8 +132,7 @@ class Participant:
                 inactivity_decay = total_score_before_decay * decay_rates[self.rank]
                 total_score_before_decay -= inactivity_decay
                 print(f"Decay applied for inactivity to {self.name} ({self.rank}): -{inactivity_decay:.2f}")
-                self.inactivity_period = 0  # Reset inactivity only when decay is applied
-                
+        
         # Set the total score after decay
         self.total_score = total_score_before_decay
 
@@ -172,8 +172,7 @@ def distrubte_events_across_seasons(num_of_events,num_of_seasons):
             break
     return event_assignment
 
-def simulate_events(num_events, event_size, participants, start_event_number, thresholds):
-   
+def simulate_events(num_events, event_size, participants, start_event_number, thresholds, inactivity_threshold=3):
     print(f"\nSimulating with Event Size: {event_size}")
     print("=" * 80)
     for event_number in range(start_event_number, start_event_number + num_events):
@@ -184,10 +183,24 @@ def simulate_events(num_events, event_size, participants, start_event_number, th
         print("-" * 92)
 
         for participant in participants:
+            # Store the previous total score before calculating new scores
+            previous_total = participant.total_score
+            
             event = Event("Test Event", event_size, "2024-01-01", "standard")
             
-            # Osama (base_score = 0) - New participant, average performance
-            if participant.name == "Osama":
+            # Track inactivity without resetting
+            was_inactive = False
+            if (participant.name == "Ayoub" and event_number < 6) or \
+               (participant.name == "Iman" and 7 <= event_number <= 9) or \
+               (participant.name == "Bisma" and event_number % 3 == 0) or \
+               (participant.name == "Fatima" and event_number >= 8):
+                participant.inactivity_period += 1
+                was_inactive = True
+            else:
+                participant.inactivity_period = 0
+            
+            # Only update metrics if participant is active
+            if not was_inactive:
                 participant.update_metrics_score(
                     event=event,
                     response_time_mins=35,   # Average response time
@@ -209,134 +222,20 @@ def simulate_events(num_events, event_size, participants, start_event_number, th
                     conflicts_resolved=7,
                     total_conflicts=10
                 )
-            # Iman (base_score = 250) - Developing performer
-            elif participant.name == "Iman":
-                participant.update_metrics_score(
-                    event=event,
-                    response_time_mins=30,   # Better than average
-                    late_arrivals=1,
-                    early_departures=1,
-                    unscheduled_absences=0,
-                    completed_tasks=8,       # Good completion rate
-                    total_tasks=10,
-                    logged_hours=36,
-                    expected_hours=40,
-                    team_completed=8,
-                    team_total=10,
-                    actual_time=36,
-                    planned_time=40,
-                    problem_time=36,
-                    expected_problem_time=40,
-                    successful_solutions=8,
-                    total_solutions=10,
-                    conflicts_resolved=8,
-                    total_conflicts=10
-                )
-            # Ayoub (base_score = 500) - Experienced performer
-            elif participant.name == "Ayoub":
-                participant.update_metrics_score(
-                    event=event,
-                    response_time_mins=20,   # Very good response time
-                    late_arrivals=0,         # Strong attendance
-                    early_departures=0,
-                    unscheduled_absences=0,
-                    completed_tasks=9,       # Very good completion
-                    total_tasks=10,
-                    logged_hours=38,
-                    expected_hours=40,
-                    team_completed=9,
-                    team_total=10,
-                    actual_time=38,
-                    planned_time=40,
-                    problem_time=38,
-                    expected_problem_time=40,
-                    successful_solutions=9,
-                    total_solutions=10,
-                    conflicts_resolved=9,
-                    total_conflicts=10
-                )
-            # Bisma (base_score = 750) - Senior performer
-            elif participant.name == "Bisma":
-                participant.update_metrics_score(
-                    event=event,
-                    response_time_mins=15,   # Excellent response time
-                    late_arrivals=0,
-                    early_departures=0,
-                    unscheduled_absences=0,
-                    completed_tasks=9,
-                    total_tasks=10,
-                    logged_hours=39,
-                    expected_hours=40,
-                    team_completed=9,
-                    team_total=10,
-                    actual_time=39,
-                    planned_time=40,
-                    problem_time=39,
-                    expected_problem_time=40,
-                    successful_solutions=9,
-                    total_solutions=10,
-                    conflicts_resolved=9,
-                    total_conflicts=10
-                )
-            # Fatima (base_score = 1000) - Expert performer
-            else:
-                participant.update_metrics_score(
-                    event=event,
-                    response_time_mins=10,   # Outstanding response time
-                    late_arrivals=0,         # Perfect attendance
-                    early_departures=0,
-                    unscheduled_absences=0,
-                    completed_tasks=10,      # Perfect completion
-                    total_tasks=10,
-                    logged_hours=40,         # Full commitment
-                    expected_hours=40,
-                    team_completed=10,
-                    team_total=10,
-                    actual_time=40,
-                    planned_time=40,
-                    problem_time=40,
-                    expected_problem_time=40,
-                    successful_solutions=10,
-                    total_solutions=10,
-                    conflicts_resolved=10,
-                    total_conflicts=10
-                )
-
             
-
-            # Different inactivity patterns for each participant
-            if participant.name == "Ayoub" and event_number <= 6:  # Inactive for first 5 events
-                participant.inactivity_period += 1
-            elif participant.name == "Iman" and 7 <= event_number <= 9:  # Inactive during events 7-9
-                participant.inactivity_period += 1
-            elif participant.name == "Bisma" and event_number % 3 == 0:  # Inactive every 3rd event
-                participant.inactivity_period += 1
-            elif participant.name == "Fatima" and event_number >= 8:  # Inactive for last few events
-                participant.inactivity_period += 1
-            else:
-                participant.inactivity_period = 0
-           
-            participant.calculate_event_score(event_size)  # Use the given event size for score calculation
-
-            # Apply decay before updating final total score
-           
-            # Calculate the real metrics_score but display 0 if inactive
-            display_metrics_score = 0 if participant.inactivity_period >= 1 else participant.metrics_score
-             
-            participant.apply_decay()
-            
-
+            participant.calculate_event_score(event_size)
+            participant.apply_decay(inactivity_threshold=inactivity_threshold)
             participant.determine_rank(thresholds)
-
             
+            # Update base_score to previous event's total score
+            participant.base_score = previous_total
+
             badge = participant.award_badge()
             inactivity_display = f"{participant.inactivity_period} months" if participant.inactivity_period > 0 else "Active"
             
-            # Use display_metrics_score for printing
-            print(f"{participant.name:<10} | {participant.base_score:<10.1f} | {display_metrics_score:<15.2f} | {participant.event_score:<15.2f} | {participant.total_score:<15.1f} | {participant.rank:<6} | {participant.inactivity_period:<10} | Badge: {badge}")
-            participant.base_score = participant.total_score
+            print(f"{participant.name:<10} | {participant.base_score:<10.1f} | {participant.metrics_score:<15.2f} | {participant.event_score:<15.2f} | {participant.total_score:<15.1f} | {participant.rank:<6} | {participant.inactivity_period:<10} | Badge: {badge}")
 
-        print("=" * 50)  # Separator between events
+        print("=" * 50)
 
 
 switch_between_reset_modes=True # changing the reset methods used below
@@ -367,109 +266,120 @@ INITIAL_BASE_SCORES = {
 # Test different event sizes with continuous event numbering
 event_sizes = [50, 100, 150, 200, 250] * 4  # Multiply by 4 to get 20 events total
 
-# First simulation with standard thresholds
-current_event_number = 1
-shuffled_sizes = event_sizes.copy()
-random.shuffle(shuffled_sizes)
-print(f"\nUsing standard thresholds: {THRESHOLDS['standard']}")
-print(f"Shuffled event sizes: {shuffled_sizes}")
-number_of_seasons,event_distribution,counter = prepare_distributed_reset(len(event_sizes)) # this is reseting the values, or setting them
-breakpoint = event_distribution[counter]
-if switch_between_reset_modes:
-    print(event_distribution)
-print("Season", counter+1)
-print("#" * 90)     
-for event_size in shuffled_sizes:
-    if not switch_between_reset_modes:
-        if (current_event_number)==((((counter+1)*len(event_sizes))//number_of_seasons)+1): # this is the case of evenly distributed events accross seasons
-            apply_reset(participants,THRESHOLDS["standard"])
-            counter+=1
-            print("Season",counter+1)
-            print("#"*90)
-    simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["standard"])
+inactivity_thresholds = [1,2, 3, 4]
+
+for inactivity_threshold in inactivity_thresholds:
+    print(f"\n\n{'='*50}")
+    print(f"TESTING WITH INACTIVITY THRESHOLD = {inactivity_threshold}")
+    print(f"{'='*50}\n")
+
+    # Reset participants for new threshold test
+    for participant in participants:
+        participant.base_score = INITIAL_BASE_SCORES[participant.name]
+        participant.total_score = participant.base_score
+        participant.inactivity_period = 0
+
+    # First simulation with standard thresholds
+    current_event_number = 1
+    shuffled_sizes = event_sizes.copy()
+    random.shuffle(shuffled_sizes)
+    print(f"\nUsing standard thresholds: {THRESHOLDS['standard']}")
+    print(f"Shuffled event sizes: {shuffled_sizes}")
+    number_of_seasons,event_distribution,counter = prepare_distributed_reset(len(event_sizes))
+    breakpoint = event_distribution[counter]
     if switch_between_reset_modes:
-        if (current_event_number) == breakpoint:
-                
+        print(event_distribution)
+    print("Season", counter+1)
+    print("#" * 90)     
+    for event_size in shuffled_sizes:
+        if not switch_between_reset_modes:
+            if (current_event_number)==((((counter+1)*len(event_sizes))//number_of_seasons)+1):
+                apply_reset(participants,THRESHOLDS["standard"])
+                counter+=1
+                print("Season",counter+1)
+                print("#"*90)
+        simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["standard"], inactivity_threshold)
+        if switch_between_reset_modes:
+            if (current_event_number) == breakpoint:
                 apply_reset(participants,THRESHOLDS["standard"])
                 counter += 1
                 try:
-                    breakpoint += event_distribution[counter] # this avoids an issue that accurs in the last event
+                    breakpoint += event_distribution[counter]
                     print("Season", counter+1)
                     print("#" * 90)
                 except:
                     pass
-        
-    current_event_number += 1
-# Reset participants for competitive thresholds
-for participant in participants:
-    participant.base_score = INITIAL_BASE_SCORES[participant.name]
-    participant.total_score = participant.base_score
-    participant.inactivity_period = 0
+        current_event_number += 1
 
-current_event_number = 1
-shuffled_sizes = event_sizes.copy()
-random.shuffle(shuffled_sizes)
-print(f"\nUsing competitive thresholds: {THRESHOLDS['competitive']}")
-print(f"Shuffled event sizes: {shuffled_sizes}")
-number_of_seasons,event_distribution,counter = prepare_distributed_reset(len(event_sizes)) # this is reseting the values, or setting them
-breakpoint = event_distribution[counter]
-if switch_between_reset_modes:
-    print(event_distribution)
-counter=0
-for event_size in shuffled_sizes:
-    if not switch_between_reset_modes:
-        if (current_event_number)==((((counter+1)*len(event_sizes))//number_of_seasons)+1): # this is the case of evenly distributed events accross seasons
-            apply_reset(participants,THRESHOLDS["competitive"])
-            counter+=1
-            print("Season",counter+1)
-            print("#"*90)
-    simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["competitive"])
+    # Reset participants for competitive thresholds
+    for participant in participants:
+        participant.base_score = INITIAL_BASE_SCORES[participant.name]
+        participant.total_score = participant.base_score
+        participant.inactivity_period = 0
+
+    current_event_number = 1
+    shuffled_sizes = event_sizes.copy()
+    random.shuffle(shuffled_sizes)
+    print(f"\nUsing competitive thresholds: {THRESHOLDS['competitive']}")
+    print(f"Shuffled event sizes: {shuffled_sizes}")
+    number_of_seasons,event_distribution,counter = prepare_distributed_reset(len(event_sizes))
+    breakpoint = event_distribution[counter]
     if switch_between_reset_modes:
-        if (current_event_number) == breakpoint:
-                
+        print(event_distribution)
+    counter=0
+    for event_size in shuffled_sizes:
+        if not switch_between_reset_modes:
+            if (current_event_number)==((((counter+1)*len(event_sizes))//number_of_seasons)+1):
+                apply_reset(participants,THRESHOLDS["competitive"])
+                counter+=1
+                print("Season",counter+1)
+                print("#"*90)
+        simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["competitive"], inactivity_threshold)
+        if switch_between_reset_modes:
+            if (current_event_number) == breakpoint:
                 apply_reset(participants,THRESHOLDS["competitive"])
                 counter += 1
                 try:
-                    breakpoint += event_distribution[counter] # this avoids an issue that accurs in the last event
+                    breakpoint += event_distribution[counter]
                     print("Season", counter+1)
                     print("#" * 90)
                 except:
                     pass
-    current_event_number += 1
-# Reset participants for strict thresholds
-for participant in participants:
-    participant.base_score = INITIAL_BASE_SCORES[participant.name]
-    participant.total_score = participant.base_score
-    participant.inactivity_period = 0
+        current_event_number += 1
 
-current_event_number = 1
-shuffled_sizes = event_sizes.copy()
-random.shuffle(shuffled_sizes)
-print(f"\nUsing strict thresholds: {THRESHOLDS['strict']}")
-print(f"Shuffled event sizes: {shuffled_sizes}")
-number_of_seasons,event_distribution,counter = prepare_distributed_reset(len(event_sizes)) # this is reseting the values, or setting them
-breakpoint = event_distribution[counter]
-if switch_between_reset_modes:
-    print(event_distribution)
-print("Season", counter+1)
-print("#" * 90) 
-for event_size in shuffled_sizes:
-    if not switch_between_reset_modes:
-        if (current_event_number)==((((counter+1)*len(event_sizes))//number_of_seasons)+1): # this is the case of evenly distributed events accross seasons
-            apply_reset(participants,THRESHOLDS["strict"])
-            counter+=1
-            print("Season",counter+1)
-            print("#"*90)
-    simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["strict"])
+    # Reset participants for strict thresholds
+    for participant in participants:
+        participant.base_score = INITIAL_BASE_SCORES[participant.name]
+        participant.total_score = participant.base_score
+        participant.inactivity_period = 0
+
+    current_event_number = 1
+    shuffled_sizes = event_sizes.copy()
+    random.shuffle(shuffled_sizes)
+    print(f"\nUsing strict thresholds: {THRESHOLDS['strict']}")
+    print(f"Shuffled event sizes: {shuffled_sizes}")
+    number_of_seasons,event_distribution,counter = prepare_distributed_reset(len(event_sizes))
+    breakpoint = event_distribution[counter]
     if switch_between_reset_modes:
-        if (current_event_number) == breakpoint:
-                
+        print(event_distribution)
+    print("Season", counter+1)
+    print("#" * 90)
+    for event_size in shuffled_sizes:
+        if not switch_between_reset_modes:
+            if (current_event_number)==((((counter+1)*len(event_sizes))//number_of_seasons)+1):
+                apply_reset(participants,THRESHOLDS["strict"])
+                counter+=1
+                print("Season",counter+1)
+                print("#"*90)
+        simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["strict"], inactivity_threshold)
+        if switch_between_reset_modes:
+            if (current_event_number) == breakpoint:
                 apply_reset(participants,THRESHOLDS["strict"])
                 counter += 1
                 try:
-                    breakpoint += event_distribution[counter] # this avoids an issue that accurs in the last event
+                    breakpoint += event_distribution[counter]
                     print("Season", counter+1)
                     print("#" * 90)
                 except:
                     pass
-    current_event_number += 1
+        current_event_number += 1
