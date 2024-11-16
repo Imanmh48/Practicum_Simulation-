@@ -94,7 +94,8 @@ class Participant:
         )
 
     def determine_rank(self, thresholds):
-        if self.total_score >= thresholds[0]:
+        # Make Platinum more exclusive - only top performers get it
+        if self.total_score >= thresholds[0] and self.metrics_score >= 7:  # Requiring high metrics performance
             self.rank = 'Platinum'
         elif self.total_score >= thresholds[1]:
             self.rank = 'Gold'
@@ -106,35 +107,31 @@ class Participant:
             self.rank = 'Bronze'
     
 
-    def apply_decay(self, inactivity_threshold=3):
+    def apply_decay(self, inactivity_threshold=2):
         # Calculate the current total score first
         previous_metrics = getattr(self, '_previous_metrics_score', self.metrics_score)
         if self.inactivity_period >= 1 or (hasattr(self, '_previous_metrics_score') and (previous_metrics - self.metrics_score) > METRICS_DECLINE_THRESHOLD):
             current_total = self.total_score
         else:
-            metrics_modifier = 1 + (self.metrics_score / 50)  # 2% to 20% increase
-            
-            if self.base_score == 0:
-                base_value = 100
-            else:
-                base_value = self.base_score
-            
+            metrics_modifier = 1 + (self.metrics_score / 50)
+            base_value = 100 if self.base_score == 0 else self.base_score
             current_total = (base_value + self.event_score) * metrics_modifier
 
-        # Store current_total for decay calculations
         total_score_before_decay = current_total
 
-                # Apply inactivity decay if inactivity_period > threshold
-        if self.inactivity_period >= inactivity_threshold:
+        # Apply inactivity decay if inactivity_period equals threshold
+        if self.inactivity_period == inactivity_threshold:
             if self.rank in DECAY_RATES:
                 print(f"Total Score before decay for {self.name}: {total_score_before_decay:.2f}")
                 inactivity_decay = total_score_before_decay * DECAY_RATES[self.rank]
                 total_score_before_decay -= inactivity_decay
                 print(f"Decay applied for inactivity to {self.name} ({self.rank}): -{inactivity_decay:.2f}")
-        
+                # Reset inactivity period after applying decay
+                self.inactivity_period = 0
+
         # Apply metrics decline decay using total_score_before_decay
         previous_metrics = getattr(self, '_previous_metrics_score', self.metrics_score)
-        original_score = total_score_before_decay  # Store the original score before decay
+        original_score = total_score_before_decay
         if hasattr(self, '_previous_metrics_score') and (previous_metrics - self.metrics_score) > METRICS_DECLINE_THRESHOLD:
             metrics_decay = original_score * METRICS_DECLINE_DECAY_RATE
             total_score_before_decay -= metrics_decay
