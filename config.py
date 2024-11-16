@@ -2,7 +2,7 @@ import random
 # Simulation Configuration Parameters
 NUMBER_OF_SEASONS = 4
 NUMBER_OF_VOLUNTEERS = 19
-PERSONALITIES = ["lazy","average","growing","unconsistent","ideal"]
+PERSONALITIES = ["lazy","average","growing","inconsistent","ideal"]
 # Threshold configurations
 THRESHOLDS = {
     "standard": [1000, 800, 600, 400],
@@ -44,3 +44,6 @@ EVENT_SCORE_CONFIG = {
     'thresholds': [200, 100, 50, 10],  # Size thresholds in descending order
     'scores': [50, 100, 150, 200]     # Corresponding scores
 }
+
+# Platinum rank requirements
+PLATINUM_METRICS_THRESHOLD = 7
