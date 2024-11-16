@@ -36,7 +36,7 @@ for v in range(NUMBER_OF_VOLUNTEERS):
 # Event size configuration
 EVENT_SIZES = [50, 100, 150, 200, 250] * 4  # Multiply by 4 to get 20 events total
 
-METRICS_DECLINE_THRESHOLD = 2.0  # Threshold for metrics score decline
+METRICS_DECLINE_THRESHOLD = 1.0  # Threshold for metrics score decline
 
 METRICS_DECLINE_DECAY_RATE = 0.15 
 
