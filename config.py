@@ -1,6 +1,8 @@
+import random
 # Simulation Configuration Parameters
 NUMBER_OF_SEASONS = 4
-
+NUMBER_OF_VOLUNTEERS = 19
+PERSONALITIES = ["lazy","average","growing","unconsistent","ideal"]
 # Threshold configurations
 THRESHOLDS = {
     "standard": [1000, 800, 600, 400],
@@ -16,14 +18,20 @@ DECAY_RATES = {
     "Silver": 0.10,    # 5% decay
     "Bronze": 0.08     # 3% decay
 }
-
-INITIAL_BASE_SCORES = {
-    "Osama": 0,
-    "Iman": 250,
-    "Ayoub": 601,
-    "Bisma": 750,
-    "Fatima": 1000
-}
+HIGHEST_POSSIBLE_SCORE=1000
+INITIAL_BASE_SCORES={}
+for v in range(NUMBER_OF_VOLUNTEERS):
+    if v%3==0:
+        INITIAL_BASE_SCORES["v"+str(v+1)]=0  # Setting some of the scores to 0 as if they are new
+    else:
+        INITIAL_BASE_SCORES["v"+str(v+1)]=random.randint(0,HIGHEST_POSSIBLE_SCORE)
+# INITIAL_BASE_SCORES = {
+#     "Osama": 0,
+#     "Iman": 250,
+#     "Ayoub": 601,
+#     "Bisma": 750,
+#     "Fatima": 1000
+# }
 
 # Event size configuration
 EVENT_SIZES = [50, 100, 150, 200, 250] * 4  # Multiply by 4 to get 20 events total
