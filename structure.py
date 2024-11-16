@@ -95,7 +95,7 @@ class Participant:
 
     def determine_rank(self, thresholds):
         # Make Platinum more exclusive - only top performers get it
-        if self.total_score >= thresholds[0] and self.metrics_score >= 7:  # Requiring high metrics performance
+        if self.total_score >= thresholds[0] and self.metrics_score >= PLATINUM_METRICS_THRESHOLD:  # Requiring high metrics performance
             self.rank = 'Platinum'
         elif self.total_score >= thresholds[1]:
             self.rank = 'Gold'
@@ -236,7 +236,7 @@ def simulate_events(num_events, event_size, participants, start_event_number, th
                 completed_tasks = random.randint(9, 11)      # Nearly perfect completion
                 successful_solutions = random.randint(9, 11)  # Excellent problem solving
                 conflicts_resolved = random.randint(9, 11)   # Excellent conflict resolution
-            elif participant.personality == "unconsistent":
+            elif participant.personality == "inconsistent":
                 response_time = random.randint(15,60)
                 late_arrivals = random.randint(0,4)
                 completed_tasks = random.randint(5,11)
