@@ -2,30 +2,31 @@ import random
 
 from sim1 import VolunteerMetrics
 from Event import Event
-from config import NUMBER_OF_SEASONS, THRESHOLDS , INACTIVITY_THRESHOLDS, DECAY_RATES, INITIAL_BASE_SCORES, EVENT_SIZES, METRICS_DECLINE_THRESHOLD, METRICS_DECLINE_DECAY_RATE,EVENT_SCORE_CONFIG
+from config import *
 #random.seed(1)
 class Participant:
-    def __init__(self, name, base_score):
+    def __init__(self, name, base_score,personality):
         self.name = name
         self.base_score = base_score
 
-        self.response_time = 0.0
-        self.attendance_rate = 0.0
-        self.task_completion_rate = 0.0
+        self.response_time = 0
+        self.attendance_rate = 0
+        self.task_completion_rate = 0
 
-        self.event_score = 0.0
-        self.metrics_score = 0.0 # the current postion of the participant in the metrics
+        self.event_score = 0
+        self.metrics_score = 0 # the current postion of the participant in the metrics
 
-        self.hours_commitment = 0.0
-        self.team_performance = 0.0
-        self.problem_solving = 0.0
-        self.conflict_resolution = 0.0
-        self.leadership_metrics = 0.0
-        self.leadership_appointments = 0.0
+        self.hours_commitment = 0
+        self.team_performance = 0
+        self.problem_solving = 0
+        self.conflict_resolution = 0
+        self.leadership_metrics = 0
+        self.leadership_appointments = 0
 
         self.total_score = base_score
         self.rank = ""
         self.inactivity_period = 0
+        self.personality=personality
 
 
     def calculate_event_score(self, event_size):
@@ -190,7 +191,7 @@ def simulate_events(num_events, event_size, participants, start_event_number, th
         
         print(f"\nEvent {event_number} (Event Size: {event_size}):")
         print("=" * 50)
-        print(f"{'Name':<10} | {'Base Score':<10} | {'Metrics_Score':<15} | {'Event Score':<15} | {'Total Score':<15} | {'Rank':<6} | {'Inactivity':<10}")
+        print(f"{'Name':<10} | {'Base Score':<10} | {'Metrics_Score':<15} | {'Event Score':<15} | {'personality':<12}|{'Total Score':<15} | {'Rank':<6} | {'Inactivity':<10}")
         print("-" * 92)
 
         for participant in participants:
@@ -213,78 +214,38 @@ def simulate_events(num_events, event_size, participants, start_event_number, th
             event = Event("Test Event", event_size, "2024-01-01", "standard")
             
             # Generate much more varied random values for each participant
-            if participant.name == "Osama":
-                # More extreme variations for Osama
-                if event_number % 2 == 0:  # Every other event
-                    response_time = random.randint(5, 15)        # Excellent response time
-                    late_arrivals = 0                           # No late arrivals
-                    completed_tasks = random.randint(9, 10)      # Nearly perfect completion
-                    team_completed = random.randint(9, 10)       # Excellent team performance
-                    successful_solutions = random.randint(9, 10)  # Excellent problem solving
-                    conflicts_resolved = random.randint(9, 10)   # Excellent conflict resolution
-                else:
-                    response_time = random.randint(80, 120)      # Very poor response time
-                    late_arrivals = random.randint(3, 5)        # Many late arrivals
-                    completed_tasks = random.randint(1, 3)       # Very poor completion
-                    team_completed = random.randint(1, 3)        # Very poor team performance
-                    successful_solutions = random.randint(1, 3)   # Very poor problem solving
-                    conflicts_resolved = random.randint(1, 3)    # Very poor conflict resolution
-                
-            elif participant.name == "Iman":
-                # Even more dramatic swings for Iman
-                if event_number % 3 == 0:  # Every third event
-                    response_time = random.randint(5, 10)
-                    late_arrivals = 0
-                    completed_tasks = 10
-                    team_completed = 10
-                    successful_solutions = 10
-                    conflicts_resolved = 10
-                else:
-                    response_time = random.randint(90, 120)
-                    late_arrivals = random.randint(4, 5)
-                    completed_tasks = random.randint(0, 2)
-                    team_completed = random.randint(0, 2)
-                    successful_solutions = random.randint(0, 2)
-                    conflicts_resolved = random.randint(0, 2)
-            elif participant.name == "Ayoub":
-                if event_number % 4 == 0:  # Every 4th event
-                    response_time = random.randint(80, 120)      # Poor response
-                    late_arrivals = random.randint(3, 5)         # Many issues
-                    completed_tasks = random.randint(1, 4)       # Poor completion
-                    team_completed = random.randint(1, 4)        # Poor team performance
-                    successful_solutions = random.randint(1, 4)   # Poor solutions
-                    conflicts_resolved = random.randint(1, 4)    # Poor conflict resolution
-                else:
-                    response_time = random.randint(20, 45)       # Average response
-                    late_arrivals = random.randint(0, 2)         # Occasional issues
-                    completed_tasks = random.randint(4, 8)       # Average completion
-                    team_completed = random.randint(4, 8)        # Average team performance
-                    successful_solutions = random.randint(4, 7)   # Average solutions
-                    conflicts_resolved = random.randint(4, 7)    # Average conflict resolution
-            elif participant.name == "Bisma":
-                if event_number % 3 == 0:  # Every 3rd event
-                    response_time = random.randint(90, 120)      # Very poor response
-                    late_arrivals = random.randint(3, 5)         # Many issues
-                    completed_tasks = random.randint(1, 3)       # Poor completion
-                    team_completed = random.randint(1, 3)        # Poor team performance
-                    successful_solutions = random.randint(1, 3)   # Poor problem solving
-                    conflicts_resolved = random.randint(1, 3)    # Poor conflict resolution
-                else:
-                    response_time = random.randint(10, 30)       # Good response
-                    late_arrivals = random.randint(0, 1)         # Rare issues
-                    completed_tasks = random.randint(6, 9)       # Good completion
-                    team_completed = random.randint(6, 9)        # Good team performance
-                    successful_solutions = random.randint(6, 9)   # Good problem solving
-                    conflicts_resolved = random.randint(6, 9)    # Good conflict resolution
-            else:  # Fatima
-                if event_number % 5 == 0:  # Every 5th event
-                    response_time = random.randint(70, 100)     # Poor performance
-                    late_arrivals = random.randint(2, 4)        # Multiple issues
-                    completed_tasks = random.randint(2, 5)      # Below average
-                else:
-                    response_time = random.randint(5, 35)       # Usually excellent
-                    late_arrivals = random.randint(0, 1)        # Very rarely late
-                    completed_tasks = random.randint(6, 10)     # Generally good
+            if participant.personality == "lazy":
+                response_time = random.randint(80, 121)      # Very poor response time
+                late_arrivals = random.randint(3, 6)        # Many late arrivals
+                completed_tasks = random.randint(1, 4)       # Very poor completion
+                team_completed = random.randint(1, 4)        # Very poor team performance
+                successful_solutions = random.randint(1, 4)   # Very poor problem solving
+                conflicts_resolved = random.randint(1, 4)    # Very poor conflict resolution
+            elif participant.personality == "ideal":
+                response_time = random.randint(5, 16)       # Excellent response time
+                late_arrivals = 0                           # No late arrivals
+                completed_tasks = random.randint(9, 11)      # Nearly perfect completion
+                successful_solutions = random.randint(9, 11)  # Excellent problem solving
+                conflicts_resolved = random.randint(9, 11)   # Excellent conflict resolution
+            elif participant.personality == "unconsistent":
+                response_time = random.randint(15,60)
+                late_arrivals = random.randint(0,4)
+                completed_tasks = random.randint(5,11)
+                successful_solutions = random.randint(5,11)
+                conflicts_resolved = random.randint(5,11)
+            elif participant.personality == "growing":
+                response_time = random.randint(0,round(participant.response_time))
+                late_arrivals = 0
+                completed_tasks = random.randint(round(participant.task_completion_rate),11)
+                successful_solutions = random.randint(round(participant.task_completion_rate),11)
+                conflicts_resolved = random.randint(round(participant.conflict_resolution),11)
+            elif participant.personality == "average":
+                response_time = random.randint(35,65)
+                late_arrivals = random.randint(0,3)
+                completed_tasks = random.randint(4,8)
+                successful_solutions = random.randint(4,8)
+                conflicts_resolved = random.randint(4,8)
+        
 
             # More variable common random values
             early_departures = random.randint(0, 2)
@@ -334,20 +295,28 @@ def simulate_events(num_events, event_size, participants, start_event_number, th
 
             inactivity_display = f"{participant.inactivity_period} months" if participant.inactivity_period > 0 else "Active"
             
-            print(f"{participant.name:<10} | {participant.base_score:<10.1f} | {participant.metrics_score:<15.2f} | {participant.event_score:<15.2f} | {participant.total_score:<15.1f} | {participant.rank:<6} | {participant.inactivity_period:<10}")
+            print(f"{participant.name:<10} | {participant.base_score:<10.1f} | {participant.metrics_score:<15.2f} | {participant.event_score:<15.2f} |{participant.personality:<12} |{participant.total_score:<15.1f} | {participant.rank:<6} | {participant.inactivity_period:<10}")
 
         print("=" * 50)
 
 
 switch_between_reset_modes=True # changing the reset methods used below
-# Initialize participants once
-participants = [
-    Participant(name="Osama", base_score=INITIAL_BASE_SCORES["Osama"]),
-    Participant(name="Iman", base_score=INITIAL_BASE_SCORES["Iman"]),
-    Participant(name="Ayoub", base_score=INITIAL_BASE_SCORES["Ayoub"]),
-    Participant(name="Bisma", base_score=INITIAL_BASE_SCORES["Bisma"]),
-    Participant(name="Fatima", base_score=INITIAL_BASE_SCORES["Fatima"])
-]
+participants = []
+personality_counter = 0
+skip = NUMBER_OF_VOLUNTEERS//len(PERSONALITIES)
+leftovers = NUMBER_OF_VOLUNTEERS%len(PERSONALITIES)
+for batch in range(0,NUMBER_OF_VOLUNTEERS,skip): 
+    if personality_counter<len(PERSONALITIES):
+        for v in range(batch,batch+skip):
+            participants.append(Participant("v"+str(v+1),INITIAL_BASE_SCORES["v"+str(v+1)],PERSONALITIES[personality_counter]))
+        personality_counter+=1
+
+if leftovers!=0:
+    for leftover in range(leftovers):
+        v+=1
+        participants.append(Participant("v"+str(v+1),INITIAL_BASE_SCORES["v"+str(v+1)],PERSONALITIES[leftover]))
+
+
 
 # Test different event sizes with continuous event numbering
 shuffled_sizes = EVENT_SIZES.copy()
@@ -378,12 +347,6 @@ for inactivity_threshold in INACTIVITY_THRESHOLDS:
     print("Season", counter+1)
     print("#" * 90)     
     for event_size in shuffled_sizes:
-        if not switch_between_reset_modes:
-            if (current_event_number)==((((counter+1)*len(EVENT_SIZES))//number_of_seasons)+1):
-                apply_reset(participants,THRESHOLDS["standard"])
-                counter+=1
-                print("Season",counter+1)
-                print("#"*90)
         simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["standard"], inactivity_threshold)
         if switch_between_reset_modes:
             if (current_event_number) == breakpoint:
@@ -414,12 +377,6 @@ for inactivity_threshold in INACTIVITY_THRESHOLDS:
         print(event_distribution)
     counter=0
     for event_size in shuffled_sizes:
-        if not switch_between_reset_modes:
-            if (current_event_number)==((((counter+1)*len(EVENT_SIZES))//number_of_seasons)+1):
-                apply_reset(participants,THRESHOLDS["competitive"])
-                counter+=1
-                print("Season",counter+1)
-                print("#"*90)
         simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["competitive"], inactivity_threshold)
         if switch_between_reset_modes:
             if (current_event_number) == breakpoint:
@@ -451,12 +408,6 @@ for inactivity_threshold in INACTIVITY_THRESHOLDS:
     print("Season", counter+1)
     print("#" * 90)
     for event_size in shuffled_sizes:
-        if not switch_between_reset_modes:
-            if (current_event_number)==((((counter+1)*len(EVENT_SIZES))//number_of_seasons)+1):
-                apply_reset(participants,THRESHOLDS["strict"])
-                counter+=1
-                print("Season",counter+1)
-                print("#"*90)
         simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["strict"], inactivity_threshold)
         if switch_between_reset_modes:
             if (current_event_number) == breakpoint:
