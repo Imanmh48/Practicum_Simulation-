@@ -94,7 +94,8 @@ class Participant:
         )
 
     def determine_rank(self, thresholds):
-        if self.total_score >= thresholds[0]:
+        # Make Platinum more exclusive - only top performers get it
+        if self.total_score >= thresholds[0] and self.metrics_score >= 7:  # Requiring high metrics performance
             self.rank = 'Platinum'
         elif self.total_score >= thresholds[1]:
             self.rank = 'Gold'
@@ -106,35 +107,31 @@ class Participant:
             self.rank = 'Bronze'
     
 
-    def apply_decay(self, inactivity_threshold=3):
+    def apply_decay(self, inactivity_threshold=2):
         # Calculate the current total score first
         previous_metrics = getattr(self, '_previous_metrics_score', self.metrics_score)
         if self.inactivity_period >= 1 or (hasattr(self, '_previous_metrics_score') and (previous_metrics - self.metrics_score) > METRICS_DECLINE_THRESHOLD):
             current_total = self.total_score
         else:
-            metrics_modifier = 1 + (self.metrics_score / 50)  # 2% to 20% increase
-            
-            if self.base_score == 0:
-                base_value = 100
-            else:
-                base_value = self.base_score
-            
+            metrics_modifier = 1 + (self.metrics_score / 50)
+            base_value = 100 if self.base_score == 0 else self.base_score
             current_total = (base_value + self.event_score) * metrics_modifier
 
-        # Store current_total for decay calculations
         total_score_before_decay = current_total
 
-                # Apply inactivity decay if inactivity_period > threshold
-        if self.inactivity_period >= inactivity_threshold:
+        # Apply inactivity decay if inactivity_period equals threshold
+        if self.inactivity_period == inactivity_threshold:
             if self.rank in DECAY_RATES:
                 print(f"Total Score before decay for {self.name}: {total_score_before_decay:.2f}")
                 inactivity_decay = total_score_before_decay * DECAY_RATES[self.rank]
                 total_score_before_decay -= inactivity_decay
                 print(f"Decay applied for inactivity to {self.name} ({self.rank}): -{inactivity_decay:.2f}")
-        
+                # Reset inactivity period after applying decay
+                self.inactivity_period = 0
+
         # Apply metrics decline decay using total_score_before_decay
         previous_metrics = getattr(self, '_previous_metrics_score', self.metrics_score)
-        original_score = total_score_before_decay  # Store the original score before decay
+        original_score = total_score_before_decay
         if hasattr(self, '_previous_metrics_score') and (previous_metrics - self.metrics_score) > METRICS_DECLINE_THRESHOLD:
             metrics_decay = original_score * METRICS_DECLINE_DECAY_RATE
             total_score_before_decay -= metrics_decay
@@ -198,14 +195,26 @@ def simulate_events(num_events, event_size, participants, start_event_number, th
             # Store the previous total score before calculating new scores
             previous_total = participant.total_score
             
-            event = Event("Test Event", event_size, "2024-01-01", "standard")
-            
-            # Track inactivity without resetting
+            # Track inactivity based on participant name and event number
             was_inactive = False
-            if (participant.name == "Ayoub" and event_number < 6) or \
-               (participant.name == "Iman" and 7 <= event_number <= 9) or \
-               (participant.name == "Bisma" and event_number % 3 == 0) or \
-               (participant.name == "Fatima" and 12 <= event_number <= 16):  # Now inactive only between events 12-16
+            participant_number = int(participant.name[1:])  # Extract number from "v1", "v2", etc.
+            
+            # Group 1 (v1-v5): Inactive during first 3 events AND every 5th event after that
+            is_group_1 = (participant_number <= 5) and (event_number <= 3 or event_number % 5 == 0)
+            
+            # Group 2 (v6-v10): Inactive during events 4-7 AND every 4th event after that
+            is_group_2 = (6 <= participant_number <= 10) and (4 <= event_number <= 7 or event_number % 4 == 0)
+            
+            # Group 3 (v11-v15): Inactive every third event AND for events 10-12
+            is_group_3 = (11 <= participant_number <= 15) and (event_number % 3 == 0 or 10 <= event_number <= 12)
+            
+            # Group 4 (v16-v20): Inactive during events 8-10 AND every 6th event
+            is_group_4 = (16 <= participant_number <= 20) and (8 <= event_number <= 10 or event_number % 6 == 0)
+            
+            # Special condition: All participants except v1, v7, v13, and v19 are inactive every 8th event
+            is_special_inactive = participant_number not in [1, 7, 13, 19] and event_number % 8 == 0
+            
+            if is_group_1 or is_group_2 or is_group_3 or is_group_4 or is_special_inactive:
                 participant.inactivity_period += 1
                 was_inactive = True
             else:
