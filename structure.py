@@ -1,11 +1,16 @@
 import random
+import os
+import matplotlib.pyplot as plt
+import numpy as np
 
 from sim1 import VolunteerMetrics
 from Event import Event
 from config import *
+import pandas as pd
+
 #random.seed(1)
 class Participant:
-    def __init__(self, name, base_score,personality):
+    def __init__(self, name, base_score, personality):
         self.name = name
         self.base_score = base_score
 
@@ -26,8 +31,7 @@ class Participant:
         self.total_score = base_score
         self.rank = ""
         self.inactivity_period = 0
-        self.personality=personality
-
+        self.personality = personality
 
     def calculate_event_score(self, event_size):
         # If participant is inactive, event_score is 0
@@ -162,7 +166,6 @@ def apply_reset(list_participants,rank_distribution): #this will apply the reset
             participant.base_score-=20 #demote by a small amount because they are already doing bad
             #print("In bronze:\t"+participant.name+"\t"+str(participant.base_score))
 
-
 def prepare_distributed_reset(event_sizes):
     return NUMBER_OF_SEASONS, distrubte_events_across_seasons(event_sizes, NUMBER_OF_SEASONS), 0
 
@@ -181,10 +184,85 @@ def distrubte_events_across_seasons(num_of_events,num_of_seasons):
             break
     return event_assignment
 
-def simulate_events(num_events, event_size, participants, start_event_number, thresholds, inactivity_threshold=3):
+def create_matplotlib_graphs(participants_history, threshold_type, event_numbers, participants):
+    # Create a new figure for overall progress
+    plt.figure(figsize=(10, 6))
+    
+    # Plot each participant's history
+    for participant, scores in participants_history.items():
+        plt.plot(event_numbers, scores, label=participant)
+    
+    # Define rank thresholds and colors
+    rank_thresholds = {
+        'Platinum': (THRESHOLDS[threshold_type.split('_')[0]][0], 'blue'),
+        'Gold': (THRESHOLDS[threshold_type.split('_')[0]][1], 'orange'),
+        'Silver': (THRESHOLDS[threshold_type.split('_')[0]][2], 'gray'),
+        'Bronze': (THRESHOLDS[threshold_type.split('_')[0]][3], 'green')
+    }
+    
+    # Add threshold lines with colors
+    for rank, (threshold, color) in rank_thresholds.items():
+        plt.axhline(y=threshold, linestyle='--', color=color, label=f"{rank} Threshold")
+    
+    # Add labels and legend
+    plt.title(f"Volunteer Progress ({threshold_type.capitalize()} Thresholds)")
+    plt.xlabel("Event Number")
+    plt.ylabel("Total Score")
+    plt.legend(loc='upper left', bbox_to_anchor=(1, 1))  # Place legend outside the plot
+    
+    # Adjust layout to make room for the legend
+    plt.tight_layout(rect=[0, 0, 0.85, 1])
+    
+    # Show the plot
+    plt.show()
+
+    # Create a graph for personality trends
+    plt.figure(figsize=(10, 6))
+    personality_colors = {
+        'lazy': 'red',
+        'ideal': 'blue',
+        'inconsistent': 'purple',
+        'growing': 'green',
+        'average': 'orange'
+    }
+    
+    # Calculate average scores for each personality
+    personality_scores = {p: [] for p in personality_colors.keys()}
+    for participant in participants:
+        personality_scores[participant.personality].append(participants_history[participant.name])
+    
+    for personality, scores_list in personality_scores.items():
+        if scores_list:
+            avg_scores = np.mean(scores_list, axis=0)
+            plt.plot(event_numbers, avg_scores, label=personality.capitalize(), color=personality_colors[personality])
+    
+    # Add threshold lines with colors
+    for rank, (threshold, color) in rank_thresholds.items():
+        plt.axhline(y=threshold, linestyle='--', color=color, label=f"{rank} Threshold")
+    
+    # Add labels and legend
+    plt.title(f"Personality-Based Progress ({threshold_type.capitalize()} Thresholds)")
+    plt.xlabel("Event Number")
+    plt.ylabel("Average Total Score")
+    plt.legend(loc='upper left', bbox_to_anchor=(1, 1))  # Place legend outside the plot
+    
+    # Adjust layout to make room for the legend
+    plt.tight_layout(rect=[0, 0, 0.85, 1])
+    
+    # Show the plot
+    plt.show()
+
+def simulate_events(num_events, event_size, participants, start_event_number, thresholds, inactivity_threshold=3, threshold_type="standard"):
     print(f"\nSimulating with Event Size: {event_size}")
     print("=" * 80)
+    
+    # Initialize history tracking
+    participants_history = {p.name: [] for p in participants}
+    rank_history = {p.name: [] for p in participants}
+    event_numbers = []
+    
     for event_number in range(start_event_number, start_event_number + num_events):
+        event_numbers.append(event_number)
         
         print(f"\nEvent {event_number} (Event Size: {event_size}):")
         print("=" * 50)
@@ -255,7 +333,6 @@ def simulate_events(num_events, event_size, participants, start_event_number, th
                 successful_solutions = random.randint(4,8)
                 conflicts_resolved = random.randint(4,8)
         
-
             # More variable common random values
             early_departures = random.randint(0, 2)
             unscheduled_absences = random.randint(0, 2)
@@ -302,12 +379,17 @@ def simulate_events(num_events, event_size, participants, start_event_number, th
             # Update base_score to previous event's total score
             participant.base_score = previous_total
 
+            # Track scores after all calculations
+            participants_history[participant.name].append(participant.total_score)
+            rank_history[participant.name].append(participant.rank)
+
             inactivity_display = f"{participant.inactivity_period} months" if participant.inactivity_period > 0 else "Active"
             
             print(f"{participant.name:<10} | {participant.base_score:<10.1f} | {participant.metrics_score:<15.2f} | {participant.event_score:<15.2f} |{participant.personality:<12} |{participant.total_score:<15.1f} | {participant.rank:<6} | {participant.inactivity_period:<10}")
 
         print("=" * 50)
-
+    
+    return participants_history, rank_history, event_numbers
 
 switch_between_reset_modes=True # changing the reset methods used below
 participants = []
@@ -330,7 +412,8 @@ if leftovers!=0:
 # Test different event sizes with continuous event numbering
 shuffled_sizes = EVENT_SIZES.copy()
 
-
+# Before the inactivity threshold loop
+simulation_results = []
 
 for inactivity_threshold in INACTIVITY_THRESHOLDS:
     print(f"\n\n{'='*50}")
@@ -345,6 +428,10 @@ for inactivity_threshold in INACTIVITY_THRESHOLDS:
 
     # First simulation with standard thresholds
     current_event_number = 1
+    all_participants_history = {p.name: [] for p in participants}
+    all_rank_history = {p.name: [] for p in participants}
+    all_event_numbers = []
+
     shuffled_sizes = EVENT_SIZES.copy()
     random.shuffle(shuffled_sizes)
     print(f"\nUsing standard thresholds: {THRESHOLDS['standard']}")
@@ -356,7 +443,15 @@ for inactivity_threshold in INACTIVITY_THRESHOLDS:
     print("Season", counter+1)
     print("#" * 90)     
     for event_size in shuffled_sizes:
-        simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["standard"], inactivity_threshold)
+        history, rank_history, event_nums = simulate_events(1, event_size, participants, current_event_number, 
+                                           THRESHOLDS["standard"], inactivity_threshold, "standard")
+        
+        # Accumulate history
+        for participant in participants:
+            all_participants_history[participant.name].extend(history[participant.name])
+            all_rank_history[participant.name].extend(rank_history[participant.name])
+        all_event_numbers.extend(event_nums)
+        
         if switch_between_reset_modes:
             if (current_event_number) == breakpoint:
                 apply_reset(participants,THRESHOLDS["standard"])
@@ -369,6 +464,9 @@ for inactivity_threshold in INACTIVITY_THRESHOLDS:
                     pass
         current_event_number += 1
 
+    print(f"\nCreating graphs for standard thresholds (Inactivity: {inactivity_threshold})...")
+    create_matplotlib_graphs(all_participants_history, f"standard_{inactivity_threshold}", all_event_numbers, participants)
+
     # Reset participants for competitive thresholds
     for participant in participants:
         participant.base_score = INITIAL_BASE_SCORES[participant.name]
@@ -376,6 +474,10 @@ for inactivity_threshold in INACTIVITY_THRESHOLDS:
         participant.inactivity_period = 0
 
     current_event_number = 1
+    all_participants_history = {p.name: [] for p in participants}
+    all_rank_history = {p.name: [] for p in participants}
+    all_event_numbers = []
+
     shuffled_sizes = EVENT_SIZES.copy()
     random.shuffle(shuffled_sizes)
     print(f"\nUsing competitive thresholds: {THRESHOLDS['competitive']}")
@@ -386,7 +488,15 @@ for inactivity_threshold in INACTIVITY_THRESHOLDS:
         print(event_distribution)
     counter=0
     for event_size in shuffled_sizes:
-        simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["competitive"], inactivity_threshold)
+        history, rank_history, event_nums = simulate_events(1, event_size, participants, current_event_number, 
+                                           THRESHOLDS["competitive"], inactivity_threshold, "competitive")
+        
+        # Accumulate history
+        for participant in participants:
+            all_participants_history[participant.name].extend(history[participant.name])
+            all_rank_history[participant.name].extend(rank_history[participant.name])
+        all_event_numbers.extend(event_nums)
+        
         if switch_between_reset_modes:
             if (current_event_number) == breakpoint:
                 apply_reset(participants,THRESHOLDS["competitive"])
@@ -399,6 +509,9 @@ for inactivity_threshold in INACTIVITY_THRESHOLDS:
                     pass
         current_event_number += 1
 
+    print(f"\nCreating graphs for competitive thresholds (Inactivity: {inactivity_threshold})...")
+    create_matplotlib_graphs(all_participants_history, f"competitive_{inactivity_threshold}", all_event_numbers, participants)
+
     # Reset participants for strict thresholds
     for participant in participants:
         participant.base_score = INITIAL_BASE_SCORES[participant.name]
@@ -406,6 +519,10 @@ for inactivity_threshold in INACTIVITY_THRESHOLDS:
         participant.inactivity_period = 0
 
     current_event_number = 1
+    all_participants_history = {p.name: [] for p in participants}
+    all_rank_history = {p.name: [] for p in participants}
+    all_event_numbers = []
+
     shuffled_sizes = EVENT_SIZES.copy()
     random.shuffle(shuffled_sizes)
     print(f"\nUsing strict thresholds: {THRESHOLDS['strict']}")
@@ -417,7 +534,15 @@ for inactivity_threshold in INACTIVITY_THRESHOLDS:
     print("Season", counter+1)
     print("#" * 90)
     for event_size in shuffled_sizes:
-        simulate_events(1, event_size, participants, current_event_number, THRESHOLDS["strict"], inactivity_threshold)
+        history, rank_history, event_nums = simulate_events(1, event_size, participants, current_event_number, 
+                                           THRESHOLDS["strict"], inactivity_threshold, "strict")
+        
+        # Accumulate history
+        for participant in participants:
+            all_participants_history[participant.name].extend(history[participant.name])
+            all_rank_history[participant.name].extend(rank_history[participant.name])
+        all_event_numbers.extend(event_nums)
+        
         if switch_between_reset_modes:
             if (current_event_number) == breakpoint:
                 apply_reset(participants,THRESHOLDS["strict"])
@@ -429,3 +554,22 @@ for inactivity_threshold in INACTIVITY_THRESHOLDS:
                 except:
                     pass
         current_event_number += 1
+
+    print(f"\nCreating graphs for strict thresholds (Inactivity: {inactivity_threshold})...")
+    create_matplotlib_graphs(all_participants_history, f"strict_{inactivity_threshold}", all_event_numbers, participants)
+
+    # After each complete simulation (at the end of the event size loop)
+    simulation_results.append(participants.copy())
+
+# Save the single workbook after all simulations are complete
+try:
+    # Remove the first empty sheet if it exists
+    if "Sheet" in workbook.sheetnames:
+        workbook.remove(workbook["Sheet"])
+    
+    filename = 'volunteer_ranking_simulation_results.xlsx'
+    workbook.save(filename)
+    print(f"\nSuccessfully saved Excel file: {filename}")
+except Exception as e:
+    print(f"Error saving Excel file: {e}")
+    print(f"Current working directory: {os.getcwd()}")
