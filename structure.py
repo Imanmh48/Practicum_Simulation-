@@ -193,6 +193,7 @@ def create_matplotlib_graphs(participants_history, threshold_type, event_numbers
     plt.title(f"Volunteer Progress ({threshold_type.capitalize()} Thresholds)")
     plt.xlabel("Event Number")
     plt.ylabel("Total Score")
+    plt.xticks(np.arange(min(event_numbers), max(event_numbers) + 1, 1))  # Set x-ticks to integer values
     plt.legend(loc='upper left', bbox_to_anchor=(1, 1))  # Place legend outside the plot
     
     # Adjust layout to make room for the legend
@@ -229,6 +230,7 @@ def create_matplotlib_graphs(participants_history, threshold_type, event_numbers
     plt.title(f"Personality-Based Progress ({threshold_type.capitalize()} Thresholds)")
     plt.xlabel("Event Number")
     plt.ylabel("Average Total Score")
+    plt.xticks(np.arange(min(event_numbers), max(event_numbers) + 1, 1))  # Set x-ticks to integer values
     plt.legend(loc='upper left', bbox_to_anchor=(1, 1))  # Place legend outside the plot
     
     # Adjust layout to make room for the legend
@@ -355,6 +357,7 @@ def simulate_events(num_events, event_size, participants, start_event_number, th
             print(f"{participant.name:<10} | {participant.base_score:<10.1f} | {participant.metrics_score:<15.2f} | {participant.event_score:<15.2f} | {participant.personality:<12} | {participant.total_score:<15.1f} | {participant.rank:<6} | {inactivity_display:<10}")
 
         print("=" * 50)
+    
     
     return participants_history, rank_history, event_numbers
 

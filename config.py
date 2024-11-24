@@ -5,9 +5,9 @@ NUMBER_OF_VOLUNTEERS = 19
 PERSONALITIES = ["lazy","average","growing","inconsistent","ideal"]
 # Threshold configurations
 THRESHOLDS = {
-    "standard": [1000, 800, 600, 400],
-    "competitive": [1500, 900, 700, 500],
-    "strict": [2000, 900, 600, 200]
+    "standard": [2500, 1800, 1200, 600],
+    "competitive": [2700, 2000, 1500, 700],
+    "strict":[3500, 2500, 1500, 500]
 } 
 
 INACTIVITY_THRESHOLDS = [1, 2, 3, 4]
@@ -22,9 +22,9 @@ HIGHEST_POSSIBLE_SCORE=1000
 INITIAL_BASE_SCORES={}
 for v in range(NUMBER_OF_VOLUNTEERS):
     if v%3==0:
-        INITIAL_BASE_SCORES["v"+str(v+1)]=0  # Setting some of the scores to 0 as if they are new
+        INITIAL_BASE_SCORES["v"+str(v+1)]=random.randint(0,HIGHEST_POSSIBLE_SCORE//4)  # Lower scores for some participants
     else:
-        INITIAL_BASE_SCORES["v"+str(v+1)]=random.randint(0,HIGHEST_POSSIBLE_SCORE)
+        INITIAL_BASE_SCORES["v"+str(v+1)]=random.randint(HIGHEST_POSSIBLE_SCORE//4,HIGHEST_POSSIBLE_SCORE)  # Higher scores for others
 # INITIAL_BASE_SCORES = {
 #     "Osama": 0,
 #     "Iman": 250,
@@ -38,7 +38,7 @@ EVENT_SIZES = [50, 100, 150, 200, 250] * 4  # Multiply by 4 to get 20 events tot
 
 METRICS_DECLINE_THRESHOLD = 1.0  # Threshold for metrics score decline
 
-METRICS_DECLINE_DECAY_RATE = 0.15 
+METRICS_DECLINE_DECAY_RATE = 0.50 
 
 EVENT_SCORE_CONFIG = {
     'thresholds': [200, 100, 50, 10],  # Size thresholds in descending order
