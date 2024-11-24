@@ -7,7 +7,7 @@ PERSONALITIES = ["lazy","average","growing","inconsistent","ideal"]
 THRESHOLDS = {
     "standard": [2500, 1800, 1200, 600],
     "competitive": [2700, 2000, 1500, 700],
-    "strict": [3000, 2200, 1600, 800]
+    "strict":[3500, 2500, 1500, 500]
 } 
 
 INACTIVITY_THRESHOLDS = [1, 2, 3, 4]
