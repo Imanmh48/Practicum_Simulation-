@@ -53,49 +53,34 @@ class Participant:
         else:  # event_size <= 50
             self.event_score = 200
     
-    def update_metrics_score(self, event, response_time_mins, late_arrivals, early_departures, 
-                           unscheduled_absences, completed_tasks, total_tasks,
-                           logged_hours, expected_hours, team_completed, team_total,
-                           actual_time, planned_time, problem_time, expected_problem_time,
-                           successful_solutions, total_solutions, conflicts_resolved, 
-                           total_conflicts):
+    def update_metrics_score(self, event, response_time,
+                             late_arrivals,
+                             completed_tasks,
+                             successful_solutions,
+                             conflicts_resolved):
         """Update metrics score based on event's metrics weights and provided metric values"""
-        # Get weights from event object
-        weights = event._get_weights_for_type(event.event_type)
-        
-        # Calculate new metric scores with weights applied
-        metrics = VolunteerMetrics()
-        
-        # Calculate new metric scores with weights applied
-        new_response_time = metrics.calculate_response_time(response_time_mins) * weights['response_time']
-        new_attendance = metrics.calculate_attendance(late_arrivals, early_departures, unscheduled_absences, 5) * weights['attendance_rate']
-        new_task_completion = metrics.calculate_task_completion(completed_tasks, total_tasks) * weights['task_completion']
-        new_hours = metrics.calculate_hours_commitment(logged_hours, expected_hours)  # No weight for hours
-        new_team_perf = metrics.calculate_team_performance(team_completed, team_total, actual_time, planned_time) * weights['team_performance']
-        new_problem_solving = metrics.calculate_problem_solving(problem_time, expected_problem_time, successful_solutions, total_solutions) * weights['problem_solving']
-        new_conflict = metrics.calculate_conflict_resolution(conflicts_resolved, total_conflicts) * weights['conflict_resolution']
-        new_leadership = metrics.calculate_leadership_metrics(team_completed, team_total, self.leadership_appointments) * weights['leadership']
-        
-        # Update metrics by averaging with previous weighted values
+        new_response_time = response_time
+        new_attendance = late_arrivals
+        new_task_completion = completed_tasks
+        new_conflict = conflicts_resolved
+
+        # Update metrics by averaging with previous values
         self.response_time = (self.response_time + new_response_time) / 2
         self.attendance_rate = (self.attendance_rate + new_attendance) / 2
         self.task_completion_rate = (self.task_completion_rate + new_task_completion) / 2
-        self.hours_commitment = (self.hours_commitment + new_hours) / 2
-        self.team_performance = (self.team_performance + new_team_perf) / 2
-        self.problem_solving = (self.problem_solving + new_problem_solving) / 2
         self.conflict_resolution = (self.conflict_resolution + new_conflict) / 2
-        self.leadership_metrics = (self.leadership_metrics + new_leadership) / 2
-        
-        # Sum up all weighted metrics for final score
-        self.metrics_score = (
+
+        # Calculate the final metrics score
+        new_metric = round((
             self.response_time +
-            self.attendance_rate + 
             self.task_completion_rate +
-            self.team_performance +
-            self.problem_solving +
-            self.leadership_metrics +
-            self.conflict_resolution
-        )
+            self.conflict_resolution +
+            self.attendance_rate
+        ), 2) / 4
+
+        if new_metric > 10:
+            new_metric = 10
+        self.metrics_score = new_metric
 
     def determine_rank(self, thresholds):
         # Make Platinum more exclusive - only top performers get it
@@ -302,36 +287,35 @@ def simulate_events(num_events, event_size, participants, start_event_number, th
             
             # Generate much more varied random values for each participant
             if participant.personality == "lazy":
-                response_time = random.randint(80, 121)      # Very poor response time
-                late_arrivals = random.randint(3, 6)        # Many late arrivals
-                completed_tasks = random.randint(1, 4)       # Very poor completion
-                team_completed = random.randint(1, 4)        # Very poor team performance
-                successful_solutions = random.randint(1, 4)   # Very poor problem solving
-                conflicts_resolved = random.randint(1, 4)    # Very poor conflict resolution
+                response_time = random.randint(1, 3)
+                late_arrivals = random.randint(1, 3)
+                completed_tasks = random.randint(1, 4)
+                successful_solutions = random.randint(1, 4)
+                conflicts_resolved = random.randint(1, 4)
             elif participant.personality == "ideal":
-                response_time = random.randint(5, 16)       # Excellent response time
-                late_arrivals = 0                           # No late arrivals
-                completed_tasks = random.randint(9, 11)      # Nearly perfect completion
-                successful_solutions = random.randint(9, 11)  # Excellent problem solving
-                conflicts_resolved = random.randint(9, 11)   # Excellent conflict resolution
+                response_time = random.randint(9, 11)
+                late_arrivals = random.randint(9, 11)
+                completed_tasks = random.randint(9, 11)
+                successful_solutions = random.randint(9, 11)
+                conflicts_resolved = random.randint(9, 11)
             elif participant.personality == "inconsistent":
-                response_time = random.randint(15,60)
-                late_arrivals = random.randint(0,4)
-                completed_tasks = random.randint(5,11)
-                successful_solutions = random.randint(5,11)
-                conflicts_resolved = random.randint(5,11)
+                response_time = random.randint(5, 11)
+                late_arrivals = random.randint(5, 11)
+                completed_tasks = random.randint(5, 11)
+                successful_solutions = random.randint(5, 11)
+                conflicts_resolved = random.randint(5, 11)
             elif participant.personality == "growing":
-                response_time = random.randint(0,round(participant.response_time))
-                late_arrivals = 0
-                completed_tasks = random.randint(round(participant.task_completion_rate),11)
-                successful_solutions = random.randint(round(participant.task_completion_rate),11)
-                conflicts_resolved = random.randint(round(participant.conflict_resolution),11)
+                response_time = random.randint(max(1, round(participant.response_time)), 11)
+                late_arrivals = random.randint(max(1, round(participant.attendance_rate)), 11)
+                completed_tasks = random.randint(max(1, round(participant.task_completion_rate)), 11)
+                successful_solutions = random.randint(max(1, round(participant.task_completion_rate)), 11)
+                conflicts_resolved = random.randint(max(1, round(participant.conflict_resolution)), 11)
             elif participant.personality == "average":
-                response_time = random.randint(35,65)
-                late_arrivals = random.randint(0,3)
-                completed_tasks = random.randint(4,8)
-                successful_solutions = random.randint(4,8)
-                conflicts_resolved = random.randint(4,8)
+                response_time = random.randint(4, 8)
+                late_arrivals = random.randint(4, 8)
+                completed_tasks = random.randint(4, 8)
+                successful_solutions = random.randint(4, 8)
+                conflicts_resolved = random.randint(4, 8)
         
             # More variable common random values
             early_departures = random.randint(0, 2)
@@ -349,26 +333,9 @@ def simulate_events(num_events, event_size, participants, start_event_number, th
             
             # Only update metrics if participant is active
             if not was_inactive:
-                participant.update_metrics_score(
-                    event=event,
-                    response_time_mins=response_time,
-                    late_arrivals=late_arrivals,
-                    early_departures=early_departures,
-                    unscheduled_absences=unscheduled_absences,
-                    completed_tasks=completed_tasks,
-                    total_tasks=total_tasks,
-                    logged_hours=logged_hours,
-                    expected_hours=expected_hours,
-                    team_completed=team_completed,
-                    team_total=team_total,
-                    actual_time=actual_time,
-                    planned_time=planned_time,
-                    problem_time=problem_time,
-                    expected_problem_time=expected_problem_time,
-                    successful_solutions=successful_solutions,
-                    total_solutions=total_solutions,
-                    conflicts_resolved=conflicts_resolved,
-                    total_conflicts=total_conflicts
+                 participant.update_metrics_score(
+                    event, response_time, late_arrivals, completed_tasks, 
+                    successful_solutions, conflicts_resolved
                 )
             
             participant.calculate_event_score(event_size)
@@ -385,7 +352,7 @@ def simulate_events(num_events, event_size, participants, start_event_number, th
 
             inactivity_display = f"{participant.inactivity_period} months" if participant.inactivity_period > 0 else "Active"
             
-            print(f"{participant.name:<10} | {participant.base_score:<10.1f} | {participant.metrics_score:<15.2f} | {participant.event_score:<15.2f} |{participant.personality:<12} |{participant.total_score:<15.1f} | {participant.rank:<6} | {participant.inactivity_period:<10}")
+            print(f"{participant.name:<10} | {participant.base_score:<10.1f} | {participant.metrics_score:<15.2f} | {participant.event_score:<15.2f} | {participant.personality:<12} | {participant.total_score:<15.1f} | {participant.rank:<6} | {inactivity_display:<10}")
 
         print("=" * 50)
     
