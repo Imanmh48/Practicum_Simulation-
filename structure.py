@@ -4,11 +4,15 @@ from sim1 import VolunteerMetrics
 from Event import Event
 from config import *
 
+#random.seed(1)
 class Participant:
     def __init__(self, name, base_score, personality):
         self.name = name
         self.base_score = base_score
 
+        self.response_time = 0
+        self.attendance_rate = 0
+        self.task_completion_rate = 0
         self.response_time = 0
         self.attendance_rate = 0
         self.task_completion_rate = 0
@@ -22,10 +26,17 @@ class Participant:
         self.conflict_resolution = 0
         self.leadership_metrics = 0
         self.leadership_appointments = 0
+        self.hours_commitment = 0
+        self.team_performance = 0
+        self.problem_solving = 0
+        self.conflict_resolution = 0
+        self.leadership_metrics = 0
+        self.leadership_appointments = 0
 
         self.total_score = base_score
         self.rank = ""
         self.inactivity_period = 0
+        self.personality = personality
         self.personality = personality
 
     def calculate_event_score(self, event_size):
@@ -99,6 +110,11 @@ class Participant:
             metrics_modifier = 1 + (self.metrics_score / 50)
             base_value = 100 if self.base_score == 0 else self.base_score
             current_total = (base_value + self.event_score) * metrics_modifier
+
+        total_score_before_decay = current_total
+        metrics_modifier = 1 + (self.metrics_score / 50)
+        base_value = 100 if self.base_score == 0 else self.base_score
+        current_total = (base_value + self.event_score) * metrics_modifier
 
         total_score_before_decay = current_total
 
