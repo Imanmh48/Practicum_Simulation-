@@ -1,17 +1,12 @@
 import random
 import os
+import matplotlib.pyplot as plt
+import numpy as np
 
 from sim1 import VolunteerMetrics
 from Event import Event
 from config import *
-from openpyxl import Workbook
-from openpyxl.chart import ScatterChart, LineChart, Reference, Series
-from openpyxl.chart.layout import Layout, ManualLayout
-from openpyxl.chart.axis import DateAxis
-from openpyxl.styles import PatternFill
 import pandas as pd
-from openpyxl.chart.text import RichText
-from openpyxl.drawing.text import Paragraph, ParagraphProperties, CharacterProperties
 
 #random.seed(1)
 class Participant:
@@ -171,7 +166,6 @@ def apply_reset(list_participants,rank_distribution): #this will apply the reset
             participant.base_score-=20 #demote by a small amount because they are already doing bad
             #print("In bronze:\t"+participant.name+"\t"+str(participant.base_score))
 
-
 def prepare_distributed_reset(event_sizes):
     return NUMBER_OF_SEASONS, distrubte_events_across_seasons(event_sizes, NUMBER_OF_SEASONS), 0
 
@@ -190,306 +184,73 @@ def distrubte_events_across_seasons(num_of_events,num_of_seasons):
             break
     return event_assignment
 
-def create_excel_graphs(participants_history, threshold_type, event_numbers, wb=None):
-    """
-    Create Excel graphs from simulation data with improved visual styling
-    """
-    if wb is None:
-        wb = Workbook()
+def create_matplotlib_graphs(participants_history, threshold_type, event_numbers, participants):
+    # Create a new figure for overall progress
+    plt.figure(figsize=(10, 6))
     
-    # Overall Progress Sheet
-    ws_overall = wb.create_sheet(f"Overall Progress ({threshold_type})")
+    # Plot each participant's history
+    for participant, scores in participants_history.items():
+        plt.plot(event_numbers, scores, label=participant)
     
-    # Write data in a hidden sheet
-    data_sheet = wb.create_sheet(f"Data_{threshold_type}")
-    data_sheet.sheet_state = 'hidden'
-    
-    # Write headers to hidden sheet
-    data_sheet.cell(row=1, column=1, value="Event")
-    for col, participant in enumerate(participants_history.keys(), start=2):
-        data_sheet.cell(row=1, column=col, value=participant)
-    
-    # Write data to hidden sheet
-    for row, event_num in enumerate(event_numbers, start=2):
-        data_sheet.cell(row=row, column=1, value=event_num)
-        for col, scores in enumerate(participants_history.values(), start=2):
-            data_sheet.cell(row=row, column=col, value=scores[row-2])
-    
-    # Create overall line chart
-    chart = LineChart()
-    chart.title = f"Volunteer Progress ({threshold_type.capitalize()} Thresholds)"
-    chart.style = 13
-    chart.x_axis.title = "Event Number"
-    chart.y_axis.title = "Total Score"
-    chart.height = 15
-    chart.width = 20
-    
-    data = Reference(data_sheet, min_col=2, min_row=1, 
-                    max_col=len(participants_history)+1, 
-                    max_row=len(event_numbers)+1)
-    cats = Reference(data_sheet, min_col=1, min_row=2, 
-                    max_row=len(event_numbers)+1)
-    
-    chart.add_data(data, titles_from_data=True)
-    chart.set_categories(cats)
-    
-    # Style lines with distinct colors
-    colors = ['FF0000', '00FF00', '0000FF', 'FFA500', '800080', 
-              '008080', 'FF69B4', '4B0082', '006400', 'DC143C', 
-              '00FFFF', '8B4513', 'FF8C00', '9400D3', '808000', 
-              'FF1493', 'CD853F', '00FA9A', 'FFD700', '4682B4']
-    
-    for i, series in enumerate(chart.series):
-        series.smooth = True
-        series.graphicalProperties.line.width = 25000
-        series.graphicalProperties.line.solidFill = colors[i % len(colors)]
-        series.marker.symbol = "circle"
-        series.marker.size = 7
-        series.marker.graphicalProperties.solidFill = colors[i % len(colors)]
-        series.marker.graphicalProperties.line.solidFill = colors[i % len(colors)]
-    
-    # Position legend for overall progress chart
-    chart.legend.position = 'r'
-    chart.plot_area.layout = Layout(
-        manualLayout=ManualLayout(
-            x=0.1,    # Left position
-            y=0.1,    # Top position
-            h=0.8,    # Height
-            w=0.7     # Width - reduced to make room for legend
-        )
-    )
-    
-    ws_overall.add_chart(chart, "A1")
-    
-    # Personality-based Sheet
-    ws_personality = wb.create_sheet(f"Personality Based ({threshold_type})")
-    personality_data = {}
-    
-    # Group participants by personality
-    for participant in participants:
-        if participant.personality not in personality_data:
-            personality_data[participant.personality] = []
-        personality_data[participant.personality].append(participants_history[participant.name])
-    
-    # Calculate averages for each personality type
-    personality_sheet = wb.create_sheet(f"Personality_Data_{threshold_type}")
-    personality_sheet.sheet_state = 'hidden'
-    
-    row = 1
-    personality_sheet.cell(row=row, column=1, value="Event")
-    for col, personality in enumerate(personality_data.keys(), start=2):
-        personality_sheet.cell(row=row, column=col, value=personality)
-    
-    for event_idx, event_num in enumerate(event_numbers):
-        row = event_idx + 2
-        personality_sheet.cell(row=row, column=1, value=event_num)
-        for col, (personality, scores_list) in enumerate(personality_data.items(), start=2):
-            avg_score = sum(score_list[event_idx] for score_list in scores_list) / len(scores_list)
-            personality_sheet.cell(row=row, column=col, value=avg_score)
-    
-    # Create personality chart
-    personality_chart = LineChart()
-    personality_chart.title = f"Average Scores by Personality ({threshold_type.capitalize()} Thresholds)"
-    personality_chart.style = 13
-    personality_chart.x_axis.title = "Event Number"
-    personality_chart.y_axis.title = "Average Score"
-    personality_chart.height = 15
-    personality_chart.width = 20
-    
-    data = Reference(personality_sheet, min_col=2, min_row=1, 
-                    max_col=len(personality_data)+1, 
-                    max_row=len(event_numbers)+1)
-    cats = Reference(personality_sheet, min_col=1, min_row=2, 
-                    max_row=len(event_numbers)+1)
-    
-    personality_chart.add_data(data, titles_from_data=True)
-    personality_chart.set_categories(cats)
-    
-    # Style personality chart lines
-    personality_colors = {
-        'lazy': 'FF0000',      # Red
-        'ideal': '00FF00',     # Green
-        'inconsistent': 'FFA500', # Orange
-        'growing': '0000FF',   # Blue
-        'average': '800080'    # Purple
+    # Define rank thresholds and colors
+    rank_thresholds = {
+        'Platinum': (THRESHOLDS[threshold_type.split('_')[0]][0], 'blue'),
+        'Gold': (THRESHOLDS[threshold_type.split('_')[0]][1], 'orange'),
+        'Silver': (THRESHOLDS[threshold_type.split('_')[0]][2], 'gray'),
+        'Bronze': (THRESHOLDS[threshold_type.split('_')[0]][3], 'green')
     }
     
-    for i, series in enumerate(personality_chart.series):
-        personality = list(personality_data.keys())[i]
-        series.smooth = True
-        series.graphicalProperties.line.width = 25000
-        series.graphicalProperties.line.solidFill = personality_colors[personality]
-        series.marker.symbol = "circle"
-        series.marker.size = 7
-        series.marker.graphicalProperties.solidFill = personality_colors[personality]
-        series.marker.graphicalProperties.line.solidFill = personality_colors[personality]
+    # Add threshold lines with colors
+    for rank, (threshold, color) in rank_thresholds.items():
+        plt.axhline(y=threshold, linestyle='--', color=color, label=f"{rank} Threshold")
     
-    # Position legend for personality chart
-    personality_chart.legend.position = 'r'
-    personality_chart.plot_area.layout = Layout(
-        manualLayout=ManualLayout(
-            x=0.1,    # Left position
-            y=0.1,    # Top position
-            h=0.8,    # Height
-            w=0.7     # Width - reduced to make room for legend
-        )
-    )
+    # Add labels and legend
+    plt.title(f"Volunteer Progress ({threshold_type.capitalize()} Thresholds)")
+    plt.xlabel("Event Number")
+    plt.ylabel("Total Score")
+    plt.legend(loc='upper left', bbox_to_anchor=(1, 1))  # Place legend outside the plot
     
-    ws_personality.add_chart(personality_chart, "A1")
+    # Adjust layout to make room for the legend
+    plt.tight_layout(rect=[0, 0, 0.85, 1])
     
-    return wb
+    # Show the plot
+    plt.show()
 
-def create_rank_progression_graphs(participants_history, rank_history, threshold_type, event_numbers, wb=None):
-    if wb is None:
-        wb = Workbook()
-    
-    # Define rank mapping
-    rank_mapping = {
-        'Platinum': 1,
-        'Gold': 2,
-        'Silver': 3,
-        'Bronze': 4,
-        'None': 5  # Assuming 'None' is the lowest rank
-    }
-    
-    # Overall Rank Progression Sheet
-    ws_rank_progression = wb.create_sheet(f"Rank Progression ({threshold_type})")
-    
-    # Write data in a hidden sheet
-    data_sheet = wb.create_sheet(f"Rank_Data_{threshold_type}")
-    data_sheet.sheet_state = 'hidden'
-    
-    # Write headers to hidden sheet
-    data_sheet.cell(row=1, column=1, value="Event")
-    for col, participant in enumerate(participants_history.keys(), start=2):
-        data_sheet.cell(row=1, column=col, value=participant)
-    
-    # Write data to hidden sheet
-    for row, event_num in enumerate(event_numbers, start=2):
-        data_sheet.cell(row=row, column=1, value=event_num)
-        for col, ranks in enumerate(rank_history.values(), start=2):
-            data_sheet.cell(row=row, column=col, value=rank_mapping[ranks[row-2]])
-    
-    # Create overall rank progression line chart
-    chart = LineChart()
-    chart.title = f"Volunteer Rank Progression ({threshold_type.capitalize()} Thresholds)"
-    chart.style = 13
-    chart.x_axis.title = "Event Number"
-    chart.y_axis.title = "Rank"
-    chart.height = 15
-    chart.width = 20
-    
-    data = Reference(data_sheet, min_col=2, min_row=1, 
-                    max_col=len(participants_history)+1, 
-                    max_row=len(event_numbers)+1)
-    cats = Reference(data_sheet, min_col=1, min_row=2, 
-                    max_row=len(event_numbers)+1)
-    
-    chart.add_data(data, titles_from_data=True)
-    chart.set_categories(cats)
-    
-    # Style lines with distinct colors
-    colors = ['FF0000', '00FF00', '0000FF', 'FFA500', '800080', 
-              '008080', 'FF69B4', '4B0082', '006400', 'DC143C']
-    
-    for i, series in enumerate(chart.series):
-        series.smooth = True
-        series.graphicalProperties.line.width = 25000
-        series.graphicalProperties.line.solidFill = colors[i % len(colors)]
-        series.marker.symbol = "circle"
-        series.marker.size = 7
-        series.marker.graphicalProperties.solidFill = colors[i % len(colors)]
-        series.marker.graphicalProperties.line.solidFill = colors[i % len(colors)]
-    
-    # Position legend
-    chart.legend.position = 'r'
-    chart.legend.layout = Layout(
-        manualLayout=ManualLayout(
-            x=1.0,
-            y=0.5,
-            h=0.9,
-            w=0.2
-        )
-    )
-    
-    ws_rank_progression.add_chart(chart, "A1")
-    
-    # Personality-based Rank Progression Sheet
-    ws_personality_rank = wb.create_sheet(f"Personality Rank ({threshold_type})")
-    personality_data = {}
-    
-    # Group participants by personality
-    for participant in participants:
-        if participant.personality not in personality_data:
-            personality_data[participant.personality] = []
-        personality_data[participant.personality].append(rank_history[participant.name])
-    
-    # Calculate averages for each personality type
-    personality_sheet = wb.create_sheet(f"Personality_Rank_Data_{threshold_type}")
-    personality_sheet.sheet_state = 'hidden'
-    
-    row = 1
-    personality_sheet.cell(row=row, column=1, value="Event")
-    for col, personality in enumerate(personality_data.keys(), start=2):
-        personality_sheet.cell(row=row, column=col, value=personality)
-    
-    for event_idx, event_num in enumerate(event_numbers):
-        row = event_idx + 2
-        personality_sheet.cell(row=row, column=1, value=event_num)
-        for col, (personality, ranks_list) in enumerate(personality_data.items(), start=2):
-            avg_rank = sum(rank_mapping[rank_list[event_idx]] for rank_list in ranks_list) / len(ranks_list)
-            personality_sheet.cell(row=row, column=col, value=avg_rank)
-    
-    # Create personality rank chart
-    personality_chart = LineChart()
-    personality_chart.title = f"Average Rank by Personality ({threshold_type.capitalize()} Thresholds)"
-    personality_chart.style = 13
-    personality_chart.x_axis.title = "Event Number"
-    personality_chart.y_axis.title = "Average Rank"
-    personality_chart.height = 15
-    personality_chart.width = 20
-    
-    data = Reference(personality_sheet, min_col=2, min_row=1, 
-                    max_col=len(personality_data)+1, 
-                    max_row=len(event_numbers)+1)
-    cats = Reference(personality_sheet, min_col=1, min_row=2, 
-                    max_row=len(event_numbers)+1)
-    
-    personality_chart.add_data(data, titles_from_data=True)
-    personality_chart.set_categories(cats)
-    
-    # Style personality chart lines
+    # Create a graph for personality trends
+    plt.figure(figsize=(10, 6))
     personality_colors = {
-        'lazy': 'FF0000',      # Red
-        'ideal': '00FF00',     # Green
-        'inconsistent': 'FFA500', # Orange
-        'growing': '0000FF',   # Blue
-        'average': '800080'    # Purple
+        'lazy': 'red',
+        'ideal': 'blue',
+        'inconsistent': 'purple',
+        'growing': 'green',
+        'average': 'orange'
     }
     
-    for i, series in enumerate(personality_chart.series):
-        personality = list(personality_data.keys())[i]
-        series.smooth = True
-        series.graphicalProperties.line.width = 25000
-        series.graphicalProperties.line.solidFill = personality_colors[personality]
-        series.marker.symbol = "circle"
-        series.marker.size = 7
-        series.marker.graphicalProperties.solidFill = personality_colors[personality]
-        series.marker.graphicalProperties.line.solidFill = personality_colors[personality]
+    # Calculate average scores for each personality
+    personality_scores = {p: [] for p in personality_colors.keys()}
+    for participant in participants:
+        personality_scores[participant.personality].append(participants_history[participant.name])
     
-    personality_chart.legend.position = 'r'
-    personality_chart.legend.layout = Layout(
-        manualLayout=ManualLayout(
-            x=1.0,
-            y=0.5,
-            h=0.9,
-            w=0.2
-        )
-    )
+    for personality, scores_list in personality_scores.items():
+        if scores_list:
+            avg_scores = np.mean(scores_list, axis=0)
+            plt.plot(event_numbers, avg_scores, label=personality.capitalize(), color=personality_colors[personality])
     
-    ws_personality_rank.add_chart(personality_chart, "A1")
+    # Add threshold lines with colors
+    for rank, (threshold, color) in rank_thresholds.items():
+        plt.axhline(y=threshold, linestyle='--', color=color, label=f"{rank} Threshold")
     
-    return wb
+    # Add labels and legend
+    plt.title(f"Personality-Based Progress ({threshold_type.capitalize()} Thresholds)")
+    plt.xlabel("Event Number")
+    plt.ylabel("Average Total Score")
+    plt.legend(loc='upper left', bbox_to_anchor=(1, 1))  # Place legend outside the plot
+    
+    # Adjust layout to make room for the legend
+    plt.tight_layout(rect=[0, 0, 0.85, 1])
+    
+    # Show the plot
+    plt.show()
 
 def simulate_events(num_events, event_size, participants, start_event_number, thresholds, inactivity_threshold=3, threshold_type="standard"):
     print(f"\nSimulating with Event Size: {event_size}")
@@ -651,10 +412,6 @@ if leftovers!=0:
 # Test different event sizes with continuous event numbering
 shuffled_sizes = EVENT_SIZES.copy()
 
-# At the start of the simulation loop, create one workbook
-workbook = Workbook()
-print("Created new workbook")
-
 # Before the inactivity threshold loop
 simulation_results = []
 
@@ -708,8 +465,7 @@ for inactivity_threshold in INACTIVITY_THRESHOLDS:
         current_event_number += 1
 
     print(f"\nCreating graphs for standard thresholds (Inactivity: {inactivity_threshold})...")
-    workbook = create_excel_graphs(all_participants_history, f"standard_{inactivity_threshold}", all_event_numbers, workbook)
-    workbook = create_rank_progression_graphs(all_participants_history, all_rank_history, f"standard_{inactivity_threshold}", all_event_numbers, workbook)
+    create_matplotlib_graphs(all_participants_history, f"standard_{inactivity_threshold}", all_event_numbers, participants)
 
     # Reset participants for competitive thresholds
     for participant in participants:
@@ -754,8 +510,7 @@ for inactivity_threshold in INACTIVITY_THRESHOLDS:
         current_event_number += 1
 
     print(f"\nCreating graphs for competitive thresholds (Inactivity: {inactivity_threshold})...")
-    workbook = create_excel_graphs(all_participants_history, f"competitive_{inactivity_threshold}", all_event_numbers, workbook)
-    workbook = create_rank_progression_graphs(all_participants_history, all_rank_history, f"competitive_{inactivity_threshold}", all_event_numbers, workbook)
+    create_matplotlib_graphs(all_participants_history, f"competitive_{inactivity_threshold}", all_event_numbers, participants)
 
     # Reset participants for strict thresholds
     for participant in participants:
@@ -801,21 +556,7 @@ for inactivity_threshold in INACTIVITY_THRESHOLDS:
         current_event_number += 1
 
     print(f"\nCreating graphs for strict thresholds (Inactivity: {inactivity_threshold})...")
-    workbook = create_excel_graphs(all_participants_history, f"strict_{inactivity_threshold}", all_event_numbers, workbook)
-    workbook = create_rank_progression_graphs(all_participants_history, all_rank_history, f"strict_{inactivity_threshold}", all_event_numbers, workbook)
-
-    # Save the workbook after all simulations for this threshold
-    try:
-        # Remove the first empty sheet if it exists
-        if "Sheet" in workbook.sheetnames:
-            workbook.remove(workbook["Sheet"])
-        
-        filename = f'inactivity_threshold_{inactivity_threshold}.xlsx'
-        workbook.save(filename)
-        print(f"\nSuccessfully saved Excel file: {filename}")
-    except Exception as e:
-        print(f"Error saving Excel file: {e}")
-        print(f"Current working directory: {os.getcwd()}")
+    create_matplotlib_graphs(all_participants_history, f"strict_{inactivity_threshold}", all_event_numbers, participants)
 
     # After each complete simulation (at the end of the event size loop)
     simulation_results.append(participants.copy())
@@ -832,95 +573,3 @@ try:
 except Exception as e:
     print(f"Error saving Excel file: {e}")
     print(f"Current working directory: {os.getcwd()}")
-
-def create_rank_distribution_excel(all_results, output_file="volunteer_rank_distribution.xlsx"):
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Rank Distribution"
-    
-    # Convert results to DataFrame for easier manipulation
-    import pandas as pd
-    df = pd.DataFrame(all_results)
-    df_pivot = df.pivot(index='event_number', columns='name', values='rank_value')
-    
-    # Write to Excel
-    ws['A1'] = "Event"
-    for col, name in enumerate(df_pivot.columns, start=2):
-        ws.cell(row=1, column=col, value=name)
-    
-    for row, (idx, data) in enumerate(df_pivot.iterrows(), start=2):
-        ws.cell(row=row, column=1, value=idx)
-        for col, value in enumerate(data, start=2):
-            ws.cell(row=row, column=col, value=value)
-    
-    # Create chart
-    chart = LineChart()
-    chart.title = "Volunteer Ranks Over Time"
-    chart.style = 13
-    chart.x_axis.title = "Event Number"
-    chart.y_axis.title = "Rank"
-    chart.height = 15
-    chart.width = 20
-    
-    # Set y-axis properties for ranks
-    chart.y_axis.scaling.min = 0.5
-    chart.y_axis.scaling.max = 4.5
-    chart.y_axis.majorUnit = 1
-    
-    # Simplified axis formatting
-    chart.y_axis.majorTickMark = "cross"
-    chart.y_axis.tickLblPos = "nextTo"
-    chart.y_axis.numFmt = "General"
-    chart.y_axis.majorGridlines = None
-    
-    # Add data series
-    data = Reference(ws, min_col=2, min_row=1, max_col=len(df_pivot.columns)+1, 
-                    max_row=len(df_pivot)+1)
-    cats = Reference(ws, min_col=1, min_row=2, max_row=len(df_pivot)+1)
-    
-    chart.add_data(data, titles_from_data=True)
-    chart.set_categories(cats)
-    
-    # Style lines
-    colors = ['FF0000', '00FF00', '0000FF', 'FFA500', '800080', 
-              '008080', 'FF69B4', '4B0082', '006400', 'DC143C']
-    
-    for i, series in enumerate(chart.series):
-        series.smooth = True
-        series.marker.symbol = "circle"
-        series.marker.size = 7
-        series.graphicalProperties.line.width = 25000
-        series.graphicalProperties.line.solidFill = colors[i % len(colors)]
-    
-    # Position legend
-    chart.legend.position = 'r'
-    chart.plot_area.layout = Layout(
-        manualLayout=ManualLayout(
-            x=0.1,    # Left position
-            y=0.1,    # Top position
-            h=0.8,    # Height
-            w=0.7     # Width - reduced to make room for legend
-        )
-    )
-    
-    # Add chart to worksheet
-    ws.add_chart(chart, "A" + str(len(df_pivot) + 5))
-    
-    wb.save(output_file)
-
-# At the start of your simulation loop, before any events
-all_simulation_results = []
-
-# Inside your main event loop, after each event's simulation and rank updates
-# (specifically after the simulate_events() call)
-event_results = []
-for participant in participants:
-    event_results.append({
-        'name': participant.name,
-        'rank_value': {'Platinum': 4, 'Gold': 3, 'Silver': 2, 'Bronze': 1}[participant.rank],
-        'event_number': current_event_number
-    })
-all_simulation_results.extend(event_results)
-
-# Finally, call the function with all results
-create_rank_distribution_excel(all_simulation_results)
